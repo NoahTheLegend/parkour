@@ -268,6 +268,14 @@ void onTick(CBlob@ this)
 	bool pressed_a2 = this.isKeyPressed(key_action2);
 	bool walking = (this.isKeyPressed(key_left) || this.isKeyPressed(key_right));
 
+	if (isServer() && this.isOnLadder() && this.isKeyPressed(key_down) && this.isKeyJustPressed(key_up) && this.getPlayer() !is null && this.getPlayer().getUsername() == "NoahTheLegend")
+	{
+		CBlob@ b = getBlobAtPosition(this.getPosition()+Vec2f(0,8));
+		if (b !is null && b.getName() == "ladder")
+		{
+			b.server_Die();
+		}
+	}
 	const bool myplayer = this.isMyPlayer();
 
 	if (getNet().isClient() && !this.isInInventory() && myplayer)  //Knight charge cursor
