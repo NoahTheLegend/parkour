@@ -12,7 +12,7 @@ f32 onHit(CBlob@ this, Vec2f worldPoint, Vec2f velocity, f32 damage, CBlob@ hitt
 	switch (customData)
 	{
 		case Hitters::builder:
-			dmg *= 2.0f;
+			this.server_Die();
 			break;
 
 		case Hitters::sword:
