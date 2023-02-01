@@ -54,7 +54,7 @@ f32 onHit(CBlob@ this, Vec2f worldPoint, Vec2f velocity, f32 damage, CBlob@ hitt
 {
 	if (customData == Hitters::builder)
 	{
-		return 1.0f;
+		this.server_Die();
 	}
 	return damage;
 }
