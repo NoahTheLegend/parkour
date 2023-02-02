@@ -20,7 +20,6 @@ void onInit(CBlob@ this)
 
 	if (this.getName() == "wooden_platform")
 	{
-
 		if (getNet().isServer())
 		{
 			dictionary harvest;
@@ -35,6 +34,25 @@ void onSetStatic(CBlob@ this, const bool isStatic)
 	if (!isStatic) return;
 
 	this.getSprite().PlaySound("/build_wood.ogg");
+}
+
+void onTick(CBlob@ this)
+{
+	if (getGameTime()==30 && isServer())
+	{
+		CBlob@ p = server_CreateBlob("wooden_platform", 0, this.getPosition());
+		if (p !is null)
+		{
+			p.SetFacingLeft(this.isFacingLeft());
+			if (p.getShape() !is null)
+			{
+				p.getShape().SetAngleDegrees(this.getAngleDegrees());
+				p.SetStatic(true);
+				this.server_Die();
+			}
+			else p.server_Die();
+		}
+	}
 }
 
 bool canBePickedUp(CBlob@ this, CBlob@ byBlob)
