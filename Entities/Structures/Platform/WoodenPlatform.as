@@ -47,7 +47,7 @@ void onTick(CBlob@ this)
 			if (p.getShape() !is null)
 			{
 				p.getShape().SetAngleDegrees(this.getAngleDegrees());
-				p.SetStatic(true);
+				p.getShape().SetStatic(true);
 				this.server_Die();
 			}
 			else p.server_Die();
