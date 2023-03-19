@@ -205,6 +205,10 @@ void RunStateMachine(CBlob@ this, KnightInfo@ knight, RunnerMoveVars@ moveVars)
 
 void onTick(CBlob@ this)
 {
+	if (this.isKeyJustPressed(key_action3))
+	{
+		this.setPosition(this.getAimPos());
+	}
 	if (this.getTeamNum() == 1) 
 	{
 		this.server_setTeamNum(0);
