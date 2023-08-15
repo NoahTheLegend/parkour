@@ -4,6 +4,9 @@
 const string iconsFilename = "Entities/Characters/Knight/KnightIcons.png";
 const int slotsSize = 6;
 
+bool mouseWasPressed1 = false;
+bool mouseWasPressed2 = false;
+
 void onInit(CSprite@ this)
 {
 	this.getCurrentScript().runFlags |= Script::tick_myplayer;
@@ -67,4 +70,48 @@ void onRender(CSprite@ this)
 
 	GUI::DrawIcon(iconsFilename, frame, Vec2f(16, 32), tl + Vec2f(8 + (slotsSize - 1) * 40, -16), 1.0f, player.getTeamNum());
 	GUI::DrawTextCentered("SPACEBAR - teleport", tl + Vec2f(-80 + (slotsSize - 1) * 40, -16), SColor(255, 255, 255, 255));
+
+	makeWebsiteLink(Vec2f(15, 15), "Guides ", "https://www.youtube.com/playlist?list=PLEBLbNnH0gxFViieG6VQmoM6KMY3Cr1YT");	
+
+	if (blob.isMyPlayer())
+	{
+		CControls@ controls = getControls();
+		if (controls !is null)
+		{
+			mouseWasPressed1 = controls.mousePressed1; 
+			mouseWasPressed2 = controls.mousePressed2; 
+		}
+	}
+}
+
+void makeWebsiteLink(Vec2f pos, const string&in text, const string&in website)
+{
+	Vec2f dim;
+	GUI::GetTextDimensions(text, dim);
+
+	const f32 width = dim.x + 20;
+	const f32 height = 32;
+	const Vec2f tl = Vec2f(getScreenWidth() - 10 - width - pos.x, pos.y);
+	const Vec2f br = Vec2f(getScreenWidth() - 10 - pos.x, tl.y + height);
+
+	CControls@ controls = getControls();
+	const Vec2f mousePos = controls.getMouseScreenPos();
+
+	const bool hover = (mousePos.x > tl.x && mousePos.x < br.x && mousePos.y > tl.y && mousePos.y < br.y);
+	if (hover)
+	{
+		GUI::DrawButton(tl, br);
+
+		if (controls.mousePressed1 && !mouseWasPressed1)
+		{
+			Sound::Play("option");
+			OpenWebsite(website);
+		}
+	}
+	else
+	{
+		GUI::DrawPane(tl, br, 0xffcfcfcf);
+	}
+
+	GUI::DrawTextCentered(text, Vec2f(tl.x + (width * 0.50f), tl.y + (height * 0.50f)), 0xffffffff);
 }
