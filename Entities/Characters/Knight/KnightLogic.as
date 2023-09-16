@@ -207,6 +207,7 @@ void onTick(CBlob@ this)
 {
 	if (this.isKeyJustPressed(key_action3))
 	{
+		this.setVelocity(Vec2f_zero);
 		this.setPosition(this.getAimPos());
 	}
 	if (this.getTeamNum() == 1) 
