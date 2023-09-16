@@ -20,3 +20,8 @@ bool canOpenDoor(CBlob@ this, CBlob@ blob)
 	}
 	return false;
 }
+
+bool isOpen(CBlob@ this)
+{
+	return !this.getShape().getConsts().collidable;
+}
