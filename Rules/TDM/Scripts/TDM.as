@@ -23,7 +23,7 @@ void Config(TDMCore@ this)
 	cfg.loadFile(cost_config_file);
 
 	//how long to wait for everyone to spawn in?
-	s32 warmUpTimeSeconds = 999999999999999999999999999999999999999999999999999999;
+	s32 warmUpTimeSeconds = 99999999999;
 	this.warmUpTime = (getTicksASecond() * warmUpTimeSeconds);
 	this.gametime = getGameTime() + this.warmUpTime;
 

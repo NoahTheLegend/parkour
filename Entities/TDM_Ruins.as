@@ -62,8 +62,7 @@ void onCommand(CBlob@ this, u8 cmd, CBitStream @params)
 void GetButtonsFor(CBlob@ this, CBlob@ caller)
 {
 	AddIconToken("$knight_class_icon$", "GUI/MenuItems.png", Vec2f(32, 32), 12, caller.getTeamNum());
-	
-	if (!canSeeButtons(this, caller)) return;
+	return;
 
 	if (canChangeClass(this, caller))
 	{
