@@ -87,6 +87,12 @@ void onTick(CBlob@ this)
 	Vec2f pos = this.getPosition();
 	const f32 tilesize = map.tilesize;
 
+	facing_direction facing;
+	bool placedOnStone;
+	bool onSurface;
+	spike_state state = spike_state(this.get_u8(state_prop));
+
+	/*
 	if (getNet().isServer() &&
 	        (map.isTileSolid(map.getTile(pos)) || map.rayCastSolid(pos - this.getVelocity(), pos)))
 	{
@@ -95,7 +101,7 @@ void onTick(CBlob@ this)
 	}
 
 	//get prop
-	spike_state state = spike_state(this.get_u8(state_prop));
+	
 	if (state == falling) //opt
 	{
 		this.getCurrentScript().runFlags &= ~Script::tick_blob_in_proximity;
@@ -105,28 +111,6 @@ void onTick(CBlob@ this)
 		return;
 	}
 
-	//check support/placement status
-	facing_direction facing;
-	bool placedOnStone;
-	bool onSurface;
-
-	//wrapped functionality
-	{
-		spikeCheckParameters temp;
-		//box
-		temp.facing = none;
-		temp.onSurface = temp.placedOnStone = false;
-
-		tileCheck(this, map, pos + Vec2f(0.0f, tilesize), 0.0f, up, temp);
-		tileCheck(this, map, pos + Vec2f(-tilesize, 0.0f), 90.0f, right, temp);
-		tileCheck(this, map, pos + Vec2f(tilesize, 0.0f), -90.0f, left, temp);
-		tileCheck(this, map, pos + Vec2f(0.0f, -tilesize), 180.0f, down, temp);
-
-		//unbox
-		facing = temp.facing;
-		placedOnStone = temp.placedOnStone;
-		onSurface = temp.onSurface;
-	}
 
 	if (!onSurface && getNet().isServer())
 	{
@@ -144,7 +128,27 @@ void onTick(CBlob@ this)
 		this.Sync(state_prop, true);
 		return;
 	}
+	*/
 
+	spikeCheckParameters temp;
+	//wrapped functionality
+	if (!temp.onSurface)
+	{
+		//box
+		temp.facing = none;
+		temp.onSurface = temp.placedOnStone = false;
+
+		tileCheck(this, map, pos + Vec2f(0.0f, tilesize), 0.0f, up, temp);
+		tileCheck(this, map, pos + Vec2f(-tilesize, 0.0f), 90.0f, right, temp);
+		tileCheck(this, map, pos + Vec2f(tilesize, 0.0f), -90.0f, left, temp);
+		tileCheck(this, map, pos + Vec2f(0.0f, -tilesize), 180.0f, down, temp);
+
+		//unbox
+		facing = temp.facing;
+		placedOnStone = temp.placedOnStone;
+		onSurface = temp.onSurface;
+	}
+	
 	if (getNet().isClient() && !this.hasTag("_frontlayer"))
 	{
 		CSprite@ sprite = this.getSprite();

@@ -44,6 +44,7 @@ void knight_clear_actor_limits(CBlob@ this)
 
 void onInit(CBlob@ this)
 {
+	this.addCommandID("cycle");
 	KnightInfo knight;
 
 	knight.state = KnightStates::normal;
