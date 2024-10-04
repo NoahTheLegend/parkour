@@ -232,18 +232,15 @@ void onTick(CBlob@ this)
 		return;
 	}
 
-	if (this != null)
+	CMap@ map = getMap();
+	Tile tile = map.getTile(this.getPosition());
+	if (map.isTileBackground(tile))
 	{
-		CMap@ map = getMap();
-		Tile tile = map.getTile(this.getPosition());
-		if (map.isTileBackground(tile) == true)
-		{
-			knight.state = 0;
-			knight.swordTimer = 0;
-			knight.slideTime = 0;
-			knight.doubleslash = false;
-			this.set_s32("currentKnightState", 0);
-		}
+		knight.state = 0;
+		knight.swordTimer = 0;
+		knight.slideTime = 0;
+		knight.doubleslash = false;
+		this.set_s32("currentKnightState", 0);
 	}
 
 	if (this.isInInventory())
