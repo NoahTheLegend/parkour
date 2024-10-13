@@ -87,9 +87,12 @@ void ManageGrapple(CBlob@ this, ArcherInfo@ archer)
 	bool right_click = this.isKeyJustPressed(key_action2);
 	CMap@ map = getMap();
 	Tile tile = map.getTile(this.getPosition());
-	if (map.isTileBackground(tile))
+	if (map.isTileBackground(tile) && tile.type != CMap::tile_wood_back // do not deactivate in wood
+		&& (tile.type == CMap::tile_castle_back ? !archer.grappling : true)) // do not deactivate in stone if already attached
 	{
 		right_click = false;
+		archer.grappling = false;
+		SyncGrapple(this);
 	}
 
 	// fletch arrows from tree
@@ -279,7 +282,6 @@ void ManageGrapple(CBlob@ this, ArcherInfo@ archer)
 			}
 			else //stuck -> pull towards pos
 			{
-
 				//wallrun/jump reset to make getting over things easier
 				//at the top of grapple
 				if (this.isOnWall()) //on wall
@@ -774,7 +776,7 @@ bool checkGrappleStep(CBlob@ this, ArcherInfo@ archer, CMap@ map, const f32 dist
 			SyncGrapple(this);
 		}
 	}
-	else if (grappleHitMap(archer, map, dist))
+	else if (grappleHitMap(this, archer, map, dist))
 	{
 		archer.grapple_id = 0;
 
@@ -826,18 +828,32 @@ bool checkGrappleStep(CBlob@ this, ArcherInfo@ archer, CMap@ map, const f32 dist
 	return false;
 }
 
-bool grappleHitMap(ArcherInfo@ archer, CMap@ map, const f32 dist = 16.0f)
+bool grappleHitMap(CBlob@ this, ArcherInfo@ archer, CMap@ map, const f32 dist = 16.0f)
 {
-	return  map.isTileSolid(archer.grapple_pos + Vec2f(0, -3)) ||			//fake quad
-	        map.isTileSolid(archer.grapple_pos + Vec2f(3, 0)) ||
-	        map.isTileSolid(archer.grapple_pos + Vec2f(-3, 0)) ||
-	        map.isTileSolid(archer.grapple_pos + Vec2f(0, 3)) ||
+	Tile up = map.getTile(archer.grapple_pos + Vec2f(0, -3));
+	Tile right = map.getTile(archer.grapple_pos + Vec2f(3, 0));
+	Tile left = map.getTile(archer.grapple_pos + Vec2f(-3, 0));
+	Tile down = map.getTile(archer.grapple_pos + Vec2f(0, 3));
+
+	if ((up.type == CMap::tile_castle_moss || right.type == CMap::tile_castle_moss
+		|| left.type == CMap::tile_castle_moss || down.type == CMap::tile_castle_moss)
+		|| up.type == CMap::tile_bedrock || right.type == CMap::tile_bedrock
+		|| left.type == CMap::tile_bedrock || down.type == CMap::tile_bedrock)
+	{
+		archer.grappling = false;
+		SyncGrapple(this);
+	}
+
+	return  map.isTileSolid(up.type) ||			//fake quad
+	        map.isTileSolid(right.type) ||
+	        map.isTileSolid(left.type) ||
+	        map.isTileSolid(down.type) ||
 	        (dist > 10.0f && map.getSectorAtPosition(archer.grapple_pos, "tree") !is null);   //tree stick
 }
 
 bool shouldReleaseGrapple(CBlob@ this, ArcherInfo@ archer, CMap@ map)
 {
-	return !grappleHitMap(archer, map) || this.isKeyPressed(key_use);
+	return !grappleHitMap(this, archer, map) || this.isKeyPressed(key_use);
 }
 
 bool canSend(CBlob@ this)

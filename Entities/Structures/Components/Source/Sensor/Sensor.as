@@ -57,6 +57,8 @@ void onCollision(CBlob@ this, CBlob@ blob, bool solid)
 	Component@ component = null;
 	if (!this.get("component", @component)) return;
 
+	if (isClient() && blob.isMyPlayer()) blob.Untag("was_hit");
+
 	if (getNet().isServer())
 	{
 		MapPowerGrid@ grid;
@@ -71,8 +73,6 @@ void onCollision(CBlob@ this, CBlob@ blob, bool solid)
 	CSprite@ sprite = this.getSprite();
 	if (sprite !is null)
 	{
-		sprite.PlaySound("mechanical_click.ogg");
-
 		if (sprite.isAnimation("impulse"))
 		{
 			sprite.SetAnimation("default");

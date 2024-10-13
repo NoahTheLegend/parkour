@@ -66,6 +66,7 @@ void onCollision(CBlob@ this, CBlob@ blob, bool solid)
 	if (this.get_u8("state") > 0) return;
 
 	if (blob is null || !canActivatePlate(blob) || !isTouchingPlate(this, blob)) return;
+	if (blob.isMyPlayer() && blob.hasTag("was_hit")) return;
 
 	this.SendCommand(this.getCommandID("activate"));
 }
@@ -176,4 +177,27 @@ bool isTouchingPlate(CBlob@ this, CBlob@ blob)
 	}
 
 	return false;
+}
+
+void onRender(CSprite@ this)
+{
+	CBlob@ blob = this.getBlob();
+	if (blob is null) return;
+	if (!blob.isOnScreen()) return;
+
+	GUI::SetFont("menu");
+	Vec2f pos2d = getDriver().getScreenPosFromWorldPos(blob.getPosition());
+	 
+	int touching = blob.getTouchingCount();
+	for (int i = 0; i < touching; i++)
+	{
+		CBlob@ b = blob.getTouchingByIndex(i);
+		if (b is null) continue;
+
+		if (b.isMyPlayer() && b.hasTag("was_hit"))
+		{
+			GUI::DrawTextCentered("You need to complete the level without taking any damage!\nRestart with touching a sensor", pos2d+Vec2f(0,20), SColor(255,255,0,0));
+			break;
+		}
+	}
 }
