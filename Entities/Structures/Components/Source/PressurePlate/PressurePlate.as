@@ -66,7 +66,11 @@ void onCollision(CBlob@ this, CBlob@ blob, bool solid)
 	if (this.get_u8("state") > 0) return;
 
 	if (blob is null || !canActivatePlate(blob) || !isTouchingPlate(this, blob)) return;
-	if (blob.isMyPlayer() && blob.hasTag("was_hit")) return;
+	if (blob.hasTag("was_hit"))
+	{
+		if (isServer()) blob.Sync("was_hit", true);
+		return;
+	}
 
 	this.SendCommand(this.getCommandID("activate"));
 }

@@ -57,7 +57,8 @@ void onCollision(CBlob@ this, CBlob@ blob, bool solid)
 	Component@ component = null;
 	if (!this.get("component", @component)) return;
 
-	if (isClient() && blob.isMyPlayer()) blob.Untag("was_hit");
+	blob.Untag("was_hit");
+	if (isServer()) blob.SYnc("was_hit", true);
 
 	if (getNet().isServer())
 	{

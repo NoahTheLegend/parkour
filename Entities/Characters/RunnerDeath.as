@@ -16,7 +16,7 @@ void onInit(CBlob@ this)
 
 f32 onHit(CBlob@ this, Vec2f worldPoint, Vec2f velocity, f32 damage, CBlob@ hitterBlob, u8 customData)
 {
-    if (isClient() && this.isMyPlayer()) this.Tag("was_hit");
+    this.Tag("was_hit");
 	// make dead state
 	// make sure this script is at the end of onHit scripts for it gets the final health
 	if (this.getHealth() <= 0.0f && !this.hasTag("dead"))
