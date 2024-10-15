@@ -143,7 +143,7 @@ void onTick(CBlob@ this)
 
 		angle = (this.getVelocity()).Angle();
 		Pierce(this);   //map
-		this.setAngleDegrees(-angle);
+		if (isServer()) this.setAngleDegrees(-angle);
 
 		if (shape.vellen > 0.0001f)
 		{
@@ -273,6 +273,13 @@ void onCollision(CBlob@ this, CBlob@ blob, bool solid, Vec2f normal, Vec2f point
 			}
 		}
 
+		Vec2f initVelocity = this.getOldVelocity();
+		f32 vellen = initVelocity.Length();
+		if (vellen < 0.1f)
+		{
+			return;
+		}
+
 		if (
 			!solid && !blob.hasTag("flesh") &&
 			!specialArrowHit(blob) &&
@@ -281,51 +288,10 @@ void onCollision(CBlob@ this, CBlob@ blob, bool solid, Vec2f normal, Vec2f point
 			return;
 		}
 
-		Vec2f initVelocity = this.getOldVelocity();
-		f32 vellen = initVelocity.Length();
-		if (vellen < 0.1f)
-		{
-			return;
-		}
-
-		f32 dmg = 0.0f;
+		f32 dmg = ArrowHitBlob(this, point1, initVelocity, dmg, blob, Hitters::arrow, arrowType);
 		if (blob.getTeamNum() != this.getTeamNum() || blob.getName() == "bridge")
 		{
 			dmg = getArrowDamage(this, vellen);
-		}
-
-		if (arrowType == ArrowType::water || arrowType == ArrowType::bomb)
-		{
-			//move backwards a smidge for non-static bodies
-			//  we use the velocity instead of the normal because we
-			//  _might_ be past the middle of the object if we're going fast enough
-			//  we use between old and new position because old has not been interfered with
-			//  but might be too far behind (and we move back by velocity anyway)
-			CShape@ shape = blob.getShape();
-			if (shape !is null && !shape.isStatic())
-			{
-				Vec2f velnorm = this.getVelocity();
-				float vellen = Maths::Min(this.getRadius(), velnorm.Normalize() * (1.0f / 30.0f));
-				Vec2f betweenpos = (this.getPosition() + this.getOldPosition()) * 0.5;
-				this.setPosition(betweenpos - (velnorm * vellen));
-			}
-		}
-
-		if (arrowType == ArrowType::water)
-		{
-			blob.Tag("force_knock"); //stun on collide
-			this.server_Die();
-			return;
-		}
-		else if (arrowType == ArrowType::bomb)
-		{
-			//apply a hard hit
-			dmg = 1.5f;
-		}
-		else
-		{
-			// this isnt synced cause we want instant collision for arrow even if it was wrong
-			dmg = ArrowHitBlob(this, point1, initVelocity, dmg, blob, Hitters::arrow, arrowType);
 		}
 
 		if (dmg > 0.0f)
@@ -366,6 +332,8 @@ bool doesCollideWithBlob(CBlob@ this, CBlob@ blob)
 	{
 		return false;
 	}
+
+	
 
 	//collide so normal arrows can be ignited
 	if (blob.getName() == "fireplace")
@@ -560,30 +528,6 @@ f32 ArrowHitBlob(CBlob@ this, Vec2f worldPoint, Vec2f velocity, f32 damage, CBlo
 				}
 			}
 		}
-
-		if (arrowType == ArrowType::fire)
-		{
-			if (hitBlob.getName() == "keg" && !hitBlob.hasTag("exploding") && isServer())
-			{
-				server_Activate(hitBlob);
-			}
-
-			if (hitShield)
-			{
-				// don't set anything on fire if we hit a shield
-				this.Tag("no_fire");
-				this.server_Die();
-			}
-			else if (hitKeg)
-			{
-				this.server_Die(); // so that it doesn't bounce off
-			}
-			else
-			{
-				this.server_SetTimeToDie(0.5f);
-				this.set_Vec2f("override fire pos", hitBlob.getPosition());
-			}
-		}
 		
 		//stick into "map" blobs
 		if (hitBlob.getShape().isStatic())
@@ -642,9 +586,6 @@ void ArrowHitMap(CBlob@ this, Vec2f worldPoint, Vec2f velocity, f32 damage, u8 c
 		}
 	}
 
-	this.Sync("lock", true);
-	this.Sync("angle", true);
-
 	this.setVelocity(Vec2f(0, 0));
 	this.setPosition(lock);
 	//this.getShape().server_SetActive( false );
@@ -689,6 +630,12 @@ void ArrowHitMap(CBlob@ this, Vec2f worldPoint, Vec2f velocity, f32 damage, u8 c
 				break;
 			}
 		}
+	}
+
+	if (isServer())
+	{
+		this.Sync("lock", true);
+		this.Sync("angle", true);
 	}
 }
 
