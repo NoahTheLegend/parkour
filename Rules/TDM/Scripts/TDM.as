@@ -776,21 +776,8 @@ shared class TDMCore : RulesCore
 					}
 				}
 			}
-
-			if (!found)
-			{
-				CBlob@ mat = server_CreateBlob("mat_arrows");
-				if (mat !is null)
-				{
-					if (!blob.server_PutInInventory(mat))
-					{
-						mat.setPosition(blob.getPosition());
-					}
-				}
-			}
 		}
 	}
-
 };
 
 //pass stuff to the core from each of the hooks
