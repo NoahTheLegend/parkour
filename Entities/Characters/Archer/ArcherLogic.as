@@ -718,6 +718,11 @@ void ManageBow(CBlob@ this, ArcherInfo@ archer, RunnerMoveVars@ moveVars)
 
 void onTick(CBlob@ this)
 {
+	if (this.getTeamNum() == 1) 
+	{
+		this.server_setTeamNum(0);
+	}
+	
 	if (this.isKeyJustPressed(key_action3))
 	{
 		this.setVelocity(Vec2f_zero);
