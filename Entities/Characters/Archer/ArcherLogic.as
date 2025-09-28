@@ -727,6 +727,8 @@ void onTick(CBlob@ this)
 	{
 		this.setVelocity(Vec2f_zero);
 		this.setPosition(this.getAimPos());
+
+		Vec2f basePos = this.getPosition();
 	}
 
 	ArcherInfo@ archer;

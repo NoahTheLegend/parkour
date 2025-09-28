@@ -2,7 +2,6 @@
 
 #include "MechanismsCommon.as";
 #include "GenericButtonCommon.as";
-#include "MiceSounds.as";
 
 class Lever : Component
 {
