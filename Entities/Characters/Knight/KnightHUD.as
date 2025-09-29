@@ -12,6 +12,8 @@ void onInit(CSprite@ this)
 	this.getCurrentScript().runFlags |= Script::tick_myplayer;
 	this.getCurrentScript().removeIfTag = "dead";
 	this.getBlob().set_u8("gui_HUD_slots_width", slotsSize);
+
+	
 }
 
 void ManageCursors(CBlob@ this)

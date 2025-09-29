@@ -250,8 +250,8 @@ class GenericGUIItem : IGUIItem{
 	private Vec2f _startSlidePos;
 
 	//Children and listeners
-	private IGUIItem@ parent;
-	private IGUIItem@[] children;
+	IGUIItem@ parent;
+	IGUIItem@[] children;
 	private CLICK_CALLBACK@[] _clickListeners;
 	private HOVER_STATE_CHANGED_CALLBACK@[] _hoverStateListeners;
 	private PRESS_STATE_CHANGED_CALLBACK@[] _pressStateListeners;
@@ -742,34 +742,50 @@ class GenericGUIItem : IGUIItem{
 		}
 	}
 
-	string textWrap(const string text_in)
+	string textWrap(const string text_in, const string font_in = "hud")
 	{
 		string temp = "";
-		const int letters = size.x / 9;
-		int counter = 0;
+		GUI::SetFont(font_in);
+		Vec2f textDim;
+		float maxWidth = size.x;
 		string[]@ tokens = text_in.split(" ");
+		string line = "";
 		for (int i = 0; i < tokens.length; i++)
 		{
-			string[]@ check = tokens[i].split("\n"); //Check for manual new lines
+			string word = tokens[i];
+			string[]@ check = word.split("\n"); //Check for manual new lines
 			for (int j = 0; j < check.length; j++)
 			{
-				if (counter + check[j].length() > letters)
+				string part = check[j];
+				string testLine = (line == "" ? part : line + " " + part);
+				GUI::GetTextDimensions(testLine, textDim);
+				if (textDim.x > maxWidth)
 				{
-					temp += "\n";
-					counter = 0;
+					if (line != "")
+					{
+						temp += line + "\n";
+						line = part;
+					}
+					else
+					{
+						temp += part + "\n";
+						line = "";
+					}
 				}
-				temp += check[j];
-				counter += check[j].length();
-
-				// If not last part, add explicit \n and reset counter
+				else
+				{
+					line = testLine;
+				}
+				// If not last part, add explicit \n and reset line
 				if (j < check.length - 1)
 				{
-					temp += "\n";
-					counter = 0;
+					temp += line + "\n";
+					line = "";
 				}
 			}
-			temp += " ";
 		}
+		if (line != "")
+			temp += line;
 		return temp;
 	}
 }
@@ -867,21 +883,27 @@ class Button : GenericGUIItem{
 	bool selfLabeled = false;
 	bool toggled = false;
 	bool nodraw;
+	SColor rectColor;
+	string font;
 
 	Button(Vec2f _position,Vec2f _size, int cd = 0){
 		super(_position,_size);
 		DebugColor = SColor(155,255,233,0);
 		_customData = cd;
+		rectColor = SColor(200,64,64,64);
+		font = "menu";
 	}
 
 	//Use to automatically make a centered label on the button using text from _desc
-	Button(Vec2f _position,Vec2f _size, string _desc, SColor _color){
+	Button(Vec2f _position,Vec2f _size, string _desc, SColor _color, string _font = "menu"){
 		super(_position,_size);
 		desc = _desc;
 		color = _color;
 		selfLabeled = true;
 		DebugColor = SColor(155,255,233,0);
 		nodraw = false;
+		rectColor = SColor(255,225,225,225);
+		font = _font;
 	}
 
 	void drawSelf(){
@@ -889,16 +911,26 @@ class Button : GenericGUIItem{
 
 		//Logic to change button based on state
 		if (isClickedWithLButton || isClickedWithRButton || toggled){
-			GUI::DrawButtonPressed(position, position+size);	
+			GUI::DrawPane(position, position+size, rectColor);
 		} else if (isHovered && !_isLocked){
-			GUI::DrawButtonHover(position, position+size);
+			SColor hoverColor = rectColor;
+			hoverColor.setRed(Maths::Min(255,hoverColor.getRed()+50));
+			hoverColor.setGreen(Maths::Min(255,hoverColor.getGreen()+50));
+			hoverColor.setBlue(Maths::Min(255,hoverColor.getBlue()+50));
+			GUI::DrawPane(position, position+size, hoverColor);
 		} else {
-			GUI::DrawButton(position, position+size);	
+			GUI::DrawPane(position, position+size, rectColor);	
 		}
 		if (selfLabeled){
-			drawRulesFont(desc,color,position + Vec2f(.5,.5),position + size - Vec2f(.5,.5),true,true);
+			GUI::SetFont(font);
+
+			Vec2f textSize;
+			GUI::GetTextDimensions(desc, textSize);
+
+			Vec2f position = this.position + Vec2f((size.x/2)-(textSize.x/2),(size.y/2)-(textSize.y/2)) - Vec2f(2, 1);
+			GUI::DrawText(desc, position, color);
 		}
-		if(_isLocked) GUI::DrawRectangle(position, position+size, SColor(200,64,64,64));
+		if(_isLocked) GUI::DrawRectangle(position, position+size, rectColor);
 		GenericGUIItem::drawSelf();
 	}
 

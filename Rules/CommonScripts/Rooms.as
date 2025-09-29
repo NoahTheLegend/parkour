@@ -180,19 +180,18 @@ void onTick(CRules@ this)
         map.server_SetTile(getControls().getMouseWorldPos(), CMap::tile_castle);
     }   
 
-    CBlob@ b = getBlobByName("archer");
-    if (b !is null && b.isKeyJustPressed(key_action1))
-    {
-        CBitStream params;
-        params.write_u8(RoomType::knight);
-        params.write_u16(0); // room id
-        params.write_Vec2f(ROOM_SIZE); // room size
-        params.write_Vec2f(Vec2f(0, 0)); // start pos
-        params.write_bool(false); // lazy load
-
-       if (isClient()) this.SendCommand(this.getCommandID("set_room"), params);
-       if (isClient()) print("sent "+this.getCommandID("set_room"));
-    }
+    //CBlob@ b = getBlobByName("archer");
+    //if (b !is null && b.isKeyJustPressed(key_action1))
+    //{
+    //    CBitStream params;
+    //    params.write_u8(RoomType::knight);
+    //    params.write_u16(0); // room id
+    //    params.write_Vec2f(ROOM_SIZE); // room size
+    //    params.write_Vec2f(Vec2f(0, 0)); // start pos
+    //    params.write_bool(false); // lazy load
+    //   if (isClient()) this.SendCommand(this.getCommandID("set_room"), params);
+    //   if (isClient()) print("sent "+this.getCommandID("set_room"));
+    //}
 }
 
 string GetRoomFile(u8 room_type, uint room_id)

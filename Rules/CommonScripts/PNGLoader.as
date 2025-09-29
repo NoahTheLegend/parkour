@@ -48,19 +48,43 @@ class RoomPNGLoader
         {
             print("Loading room: " + filename);
 
-            while (image.nextPixel())
-            {
-				// define top most non air tile and most left tile to define margin (todo)
+			// First pass: find boundaries
+			int top_margin = room_size.y / 8, bottom_margin = -1;
+			int left_margin = room_size.x / 8, right_margin = -1;
 
-                const SColor pixel = image.readPixel();
-                const Vec2f position = image.getPixelPosition() * 8;
+			// Scan all pixels to find the boundary area
+			while (image.nextPixel())
+			{
+				const SColor pixel = image.readPixel();
+				Vec2f pixel_pos = image.getPixelPosition();
 
-                if (pixel.color != map_colors::sky)
-                {
-                    handlePixel(pixel, position);
-					placed_tiles.push_back(map.getTileOffset(pos + position));
-                }
-            }
+				if (pixel.color != map_colors::sky && pixel.color != 0x00000000)
+				{
+					if (pixel_pos.y < top_margin)  top_margin = pixel_pos.y;
+					if (pixel_pos.y > bottom_margin) bottom_margin = pixel_pos.y;
+					if (pixel_pos.x < left_margin) left_margin = pixel_pos.x;
+					if (pixel_pos.x > right_margin) right_margin = pixel_pos.x;
+				}
+			}
+
+			// Second pass: process pixels and call handlePixel
+			image.ResetPixel(); // Reset to start
+			while (image.nextPixel())
+			{
+				const SColor pixel = image.readPixel();
+				Vec2f pixel_pos = image.getPixelPosition();
+
+				if (pixel.color != map_colors::sky && pixel.color != 0x00000000)
+				{
+					// Calculate the center offset so the room is centered in room_size
+					Vec2f room_center(room_size.x * 0.5f, room_size.y * 0.5f);
+					Vec2f bounds_center((left_margin + right_margin) * 0.5f * map.tilesize, (top_margin + bottom_margin) * 0.5f * map.tilesize);
+					Vec2f margin = room_center - bounds_center;
+
+					handlePixel(pixel, pixel_pos * map.tilesize + margin);
+					placed_tiles.push_back(map.getTileOffset(pos + pixel_pos * map.tilesize));
+				}
+			}
 
             // late load - after placing tiles
             for (uint i = 0; i < offsets.length; ++i)
