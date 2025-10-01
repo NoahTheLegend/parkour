@@ -3,10 +3,16 @@
 #include "TeamColour.as";
 #include "KGUI.as";
 #include "Listeners.as";
+#include "PseudoVideoPlayer.as";
 
 const Vec2f menuSize = Vec2f(500, 200);
 const f32 slideOffset = 100.0f; // extra height
 const u32 warn_menu_movement_time = 30;
+
+VideoPlayer@[] help_videos;
+
+VideoPlayer@[] active_help_videos;
+Vec2f[] active_help_video_positions;
 
 bool showMenu = false;
 f32 active_time = 0;
@@ -52,11 +58,28 @@ bool isHidden()
     return !showMenu;
 }
 
+void onReload(CRules@ this)
+{
+	LoadVideos();
+}
+
+void LoadVideos()
+{
+	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
+	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
+	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
+	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
+	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
+	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
+}
+
 void onInit(CRules@ this)
 {
 	this.set_bool("GUI initialized", false);
 	this.addCommandID("join");
 	u_showtutorial = true;
+
+	LoadVideos();
 
 	string configstr = "../Cache/NoahsParkour.cfg";
 	ConfigFile cfg = ConfigFile(configstr);
@@ -301,14 +324,14 @@ void InitializeGUI(CRules@ this)
 
 void AddSettings(CRules@ this, Rectangle@ settingsFrame)
 {
-	Vec2f buttonSize = Vec2f(settingsFrame.size.x / 2 - 10, 30);
+	Vec2f buttonSize = Vec2f(settingsFrame.size.x / 2 - 25, 30);
 
 	f32 gap = 5;
 	f32 prevHeight = 0;
 
 	// path line toggle (off by default)
 	bool path_line = this.get_bool("path_line");
-	Button@ disablePathLineToggle = @Button(Vec2f(20, 0), buttonSize, "Disable path line: " + (path_line ? "ON" : "OFF"), SColor(255, 255, 255, 255));
+	Button@ disablePathLineToggle = @Button(Vec2f(10, 0), buttonSize, "Disable path line: " + (path_line ? "ON" : "OFF"), SColor(255, 255, 255, 255));
 	disablePathLineToggle.name = "disablePathLineToggle";
 	disablePathLineToggle.selfLabeled = true;
 	disablePathLineToggle.rectColor = SColor(255, 55, 125, 185);
@@ -319,7 +342,7 @@ void AddSettings(CRules@ this, Rectangle@ settingsFrame)
 
 	// disable movement while menu is open (on by default)
 	bool disable_movement = this.get_bool("disable_movement");
-	Button@ disableMovementToggle = @Button(Vec2f(20, prevHeight), buttonSize, "Disable movement in menu: " + (disable_movement ? "ON" : "OFF"), SColor(255, 255, 255, 255));
+	Button@ disableMovementToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Menu disables movement: " + (disable_movement ? "ON" : "OFF"), SColor(255, 255, 255, 255));
 	disableMovementToggle.name = "disableMovementToggle";
 	disableMovementToggle.selfLabeled = true;
 	disableMovementToggle.rectColor = SColor(255, 55, 125, 185);
@@ -330,7 +353,7 @@ void AddSettings(CRules@ this, Rectangle@ settingsFrame)
 
 	// can open menu while moving (off by default)
 	bool allow_moving_menu = this.get_bool("allow_moving_menu");
-	Button@ allowMovingMenuToggle = @Button(Vec2f(20, prevHeight), buttonSize, "Require stop for menu: " + (allow_moving_menu ? "ON" : "OFF"), SColor(255, 255, 255, 255));
+	Button@ allowMovingMenuToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Require stop for menu: " + (allow_moving_menu ? "ON" : "OFF"), SColor(255, 255, 255, 255));
 	allowMovingMenuToggle.name = "allowMovingMenuToggle";
 	allowMovingMenuToggle.selfLabeled = true;
 	allowMovingMenuToggle.rectColor = SColor(255, 55, 125, 185);
@@ -343,7 +366,6 @@ void AddSettings(CRules@ this, Rectangle@ settingsFrame)
 void UpdateSettings(CRules@ this)
 {
 	// updates the buttons in GUI
-
 	Button@ disablePathLineToggle = cast<Button@>(settingsFrame.getChild("disablePathLineToggle"));
 	if (disablePathLineToggle !is null)
 	{
@@ -357,7 +379,7 @@ void UpdateSettings(CRules@ this)
 	{
 		bool disable_movement = disableMovementToggle.toggled;
 		this.set_bool("disable_movement", disable_movement);
-		disableMovementToggle.desc = "Disable movement in menu: " + (disable_movement ? "ON" : "OFF");
+		disableMovementToggle.desc = "Menu disables movement: " + (disable_movement ? "ON" : "OFF");
 	}
 
 	Button@ allowMovingMenuToggle = cast<Button@>(settingsFrame.getChild("allowMovingMenuToggle"));
@@ -484,6 +506,8 @@ void onRender(CRules@ this)
 	{
 		switcher.setPosition(Vec2f_lerp(switcher.localPosition, switcher.initialPosition + Vec2f(0, showMenu ? 30 : 0), 0.35f));
 	}
+
+	RenderShownVideos(active_help_videos, active_help_video_positions);
 
 	bool initialized = this.get_bool("GUI initialized");
 	if (!initialized) return;
