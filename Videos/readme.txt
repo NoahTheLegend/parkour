@@ -2,9 +2,9 @@
             Made by NoahTheLegend
 ------------------------------------------------
 
-Videos/Intro.gif
-            ^ add yourgif.gif at here
-            ^ drag & drop it onto convertgiftopngset.exe
+Videos/yourgif.gif
+      ^ add yourgif.gif here
+      ^ drag & drop it onto convertgiftopngset.exe
 
 This will convert a gif into a set of pngs at:
 Videos/Intro/Files/

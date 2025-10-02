@@ -5,9 +5,10 @@
 #include "Listeners.as";
 #include "PseudoVideoPlayer.as";
 
-const Vec2f menuSize = Vec2f(500, 200);
+const Vec2f menuSize = Vec2f(500, 400);
 const f32 slideOffset = 100.0f; // extra height
 const u32 warn_menu_movement_time = 30;
+const Vec2f default_grid = Vec2f(3, 4);
 
 VideoPlayer@[] help_videos;
 
@@ -60,15 +61,17 @@ bool isHidden()
 
 void LoadVideos()
 {
-	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
-	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
-	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
-	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
-	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
-	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
+	f32 _10fps = 0.5f;
+	f32 _60fps = 3.0f / 1.0f;
 
-	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
-	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
+	help_videos.push_back(@VideoPlayer("Videos/Intro", Vec2f(650, 276), 0.5f, _10fps));
+	help_videos.push_back(@VideoPlayer("Videos/Proper_sliding", Vec2f(342, 241), 0.5f, _60fps));
+	help_videos.push_back(@VideoPlayer("Videos/Intro", Vec2f(650, 276), 0.5f, _10fps));
+	help_videos.push_back(@VideoPlayer("Videos/Intro", Vec2f(650, 276), 0.5f, _10fps));
+	help_videos.push_back(@VideoPlayer("Videos/Intro", Vec2f(650, 276), 0.5f, _10fps));
+	help_videos.push_back(@VideoPlayer("Videos/Intro", Vec2f(650, 276), 0.5f, _10fps));
+	help_videos.push_back(@VideoPlayer("Videos/Intro", Vec2f(650, 276), 0.5f, _10fps));
+	help_videos.push_back(@VideoPlayer("Videos/Intro", Vec2f(650, 276), 0.5f, _10fps));
 }
 
 void onInit(CRules@ this)
@@ -529,7 +532,7 @@ void onRender(CRules@ this)
 	}
 
 	if (menuWindow is null) return;
-	menuWindow.draw();
+	if (menuWindow._customData == 0) menuWindow.draw();
 
 	f32 tick = 2;
 
@@ -546,7 +549,7 @@ void onRender(CRules@ this)
 	Vec2f new_position = Vec2f_lerp(menuWindow.localPosition, showMenu ? posShown : posHidden, 0.35f);
 	if (menuWindow.localPosition != new_position)
 	{
-		UpdateHelpFrameVideos(cast<Rectangle@>(helpFrame.getChild("slider")), Vec2f(3, 2));
+		UpdateHelpFrameVideos(cast<Rectangle@>(helpFrame.getChild("slider")), default_grid);
 	}
 	menuWindow.setPosition(new_position);
 
@@ -567,11 +570,11 @@ void onRender(CRules@ this)
 Vec2f getMenuPosHidden()
 {
 	Vec2f screen_size = getDriver().getScreenDimensions();
-	return Vec2f(screen_size.x / 2 - 470, screen_size.y);
+	return Vec2f(screen_size.x / 2 - menuSize.x / 2 - 150, screen_size.y);
 }
 
 Vec2f getMenuPosShown()
 {
 	Vec2f screen_size = getDriver().getScreenDimensions();
-	return Vec2f(screen_size.x / 2 - 470, screen_size.y - menuSize.y - slideOffset);
+	return Vec2f(screen_size.x / 2 - menuSize.x / 2 - 150, screen_size.y - menuSize.y - slideOffset);
 }

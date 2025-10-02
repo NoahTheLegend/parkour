@@ -20,6 +20,7 @@ class VideoPlayer
     f32 fade_in;
 
     string label;
+    string prefix;
 
     VideoPlayer(string path, Vec2f _size, f32 _scale = 1.0f, f32 _speed = 1.0f)
     {
@@ -35,19 +36,21 @@ class VideoPlayer
         total_frames = 0;
         render_time = 0.0f;
 
-        _paths_to_frames.clear();
-        cachePaths();
-
         screen_size = getDriver().getScreenDimensions();
         fade_in = 1.0f;
 
         string[] spl = path.split("/");
+        prefix = spl[spl.length() - 1];
+
         string[] label_spl = spl[spl.length() - 1].split("_");
         for (uint i = 0; i < label_spl.length(); i++)
         {
             if (i > 0) label += " ";
             label += label_spl[i];
         }
+
+        _paths_to_frames.clear();
+        cachePaths();
     }
 
     void cachePaths()
@@ -56,7 +59,7 @@ class VideoPlayer
         for (uint i = 0; i < 5120; i++)
         {
             string formatted = ("0000" + i).substr((("0000" + i).length() - 4), 4);
-            string raw_path = video_path + "/Files/" + formatted + ".png";
+            string raw_path = video_path + "/Files/" + prefix + "_" + formatted + ".png";
 
             CFileMatcher fm(raw_path);
             string frame_path = fm.getFirst();
@@ -90,6 +93,7 @@ class VideoPlayer
         screen_size = getDriver().getScreenDimensions();
     }
 
+    // TODO: refactor the whole method, also make it fancier when playing a video AND trying to close the menu (or just lock F1)
     void render(Vec2f screen_position, bool menu_open) // 1 tick = 30 units
     {
         if (!menu_open)
@@ -142,7 +146,7 @@ class VideoPlayer
             currentSY = 0.5f;
             extra_size = Vec2f(8, 8);
 
-            // draw image exactly in the center of screen
+            // draw image exactly in the center of the screen
             current_position = screen_size / 2 - Vec2f(size.x * currentSX, size.y * currentSY);
             GUI::DrawPane(current_position - extra_size, current_position + Vec2f(size.x * currentSX * 2, size.y * currentSY * 2) + extra_size, SColor(255 * fade_in, 155, 85, 25));
 
@@ -154,7 +158,7 @@ class VideoPlayer
 
         if (show_label)
         {
-            GUI::DrawTextCentered(label, current_position + Vec2f(size.x * currentSX, 10), SColor(255 * fade_in, 255, 255, 255));
+            GUI::DrawTextCentered(label, current_position + Vec2f(size.x * currentSX, 15), SColor(255 * fade_in, 255, 255, 255));
         }
     }
 
@@ -196,36 +200,78 @@ void RenderShownVideos(VideoPlayer@[] &in help_videos, Vec2f[] &in positions, bo
     CControls@ controls = getControls();
     if (controls is null) return;
 
+    ShowWindow();
     Vec2f mpos = controls.getInterpMouseScreenPos();
-    for (uint i = 0; i < active_help_videos.size(); i++)
+
+    int playing_index = -1;
+
+    // first, determine which video (if any) is playing
+    for (uint i = 0; i < help_videos.size(); i++)
     {
-        if (i >= active_help_videos.size()) break;
-        if (i >= active_help_video_positions.size()) break;
+        if (help_videos[i].isPlaying())
+        {
+            playing_index = i;
+            break;
+        }
+    }
 
-        Vec2f pos = active_help_video_positions[i];
-        Vec2f extra = Vec2f(active_help_videos[i].scaleX, active_help_videos[i].scaleY);
+    // set window hidden state based on whether any video is playing
+    if (playing_index != -1)
+    {
+        HideWindow();
+    }
+    else
+    {
+        ShowWindow();
+    }
 
-        Vec2f size = Vec2f(active_help_videos[i].size.x * extra.x * 2, active_help_videos[i].size.y * extra.y * 2);
+    // now, handle mouse-over to begin or stop videos
+    for (uint i = 0; i < help_videos.size(); i++)
+    {
+        if (i >= positions.size()) break;
+
+        Vec2f pos = positions[i];
+        Vec2f extra = Vec2f(help_videos[i].scaleX, help_videos[i].scaleY);
+        Vec2f size = Vec2f(help_videos[i].size.x * extra.x * 2, help_videos[i].size.y * extra.y * 2);
+
         if (mpos.x >= pos.x && mpos.x <= pos.x + size.x &&
             mpos.y >= pos.y && mpos.y <= pos.y + size.y)
         {
-            if (!active_help_videos[i].isPlaying())
+            if (!help_videos[i].isPlaying())
             {
-                active_help_videos[i].begin();
+                help_videos[i].begin();
             }
         }
-        else if (active_help_videos[i].isPlaying())
+        else if (help_videos[i].isPlaying())
         {
-            active_help_videos[i].stop();
+            help_videos[i].stop();
         }
     }
 
-    // run this in your onRender(CRules@) hook
+    // render videos
     for (uint i = 0; i < help_videos.size(); i++)
     {
-        if (i >= help_videos.size()) break;
         if (i >= positions.size()) break;
-        
-        help_videos[i].render(positions[i], menu_open);
+
+        // only render all videos if none are playing, otherwise only render playing videos
+        if (playing_index == -1 || help_videos[i].isPlaying())
+        {
+            help_videos[i].render(positions[i], menu_open);
+        }
     }
+}
+
+void HideWindow()
+{
+    menuWindow._customData = 1;
+}
+
+void ShowWindow()
+{
+    menuWindow._customData = 0;
+}
+
+bool isWindowHidden()
+{
+    return menuWindow._customData == 1;
 }
