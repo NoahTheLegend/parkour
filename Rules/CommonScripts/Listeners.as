@@ -23,16 +23,6 @@ void menuSwitchListener(int x, int y, int button, IGUIItem@ sender)
     showMenu = !showMenu;
 }
 
-void infoHoverListener(bool hover, IGUIItem@ item)
-{
-	if (item is null) return;
-
-    Button@ button = cast<Button@>(item);
-    if (button is null) return;
-
-    button.setToolTip(hover ? "todo" : "", 1, SColor(255, 255, 255, 255));
-}
-
 void pageClickListener(int x, int y, int button, IGUIItem@ sender)
 {
     if (sender is null) return;
@@ -169,6 +159,50 @@ void toggleListener(int x, int y, int button, IGUIItem@ sender)
     if (rules is null) return;
     
     UpdateSettings(rules);
+}
+
+void levelsClickListener(int x, int y, int button, IGUIItem@ sender)
+{
+    if (sender is null) return;
+
+    Button@ btn = cast<Button@>(sender);
+    if (btn is null) return;
+
+    Button@ knightLevelsButton = cast<Button@>(levelsFrame.getChild("knightLevelsButton"));
+    Button@ archerLevelsButton = cast<Button@>(levelsFrame.getChild("archerLevelsButton"));
+    Button@ builderLevelsButton = cast<Button@>(levelsFrame.getChild("builderLevelsButton"));
+
+    string name = btn.name;
+    if (name == "knightLevelsButton")
+    {
+        knightLevelsFrame.isEnabled = true;
+        archerLevelsFrame.isEnabled = false;
+        builderLevelsFrame.isEnabled = false;
+
+        if (knightLevelsButton !is null) knightLevelsButton.rectColor = SColor(255, 255, 25, 55);
+        if (archerLevelsButton !is null) archerLevelsButton.rectColor = SColor(255, 155, 25, 55);
+        if (builderLevelsButton !is null) builderLevelsButton.rectColor = SColor(255, 155, 25, 55);
+    }
+    else if (name == "archerLevelsButton")
+    {
+        archerLevelsFrame.isEnabled = true;
+        knightLevelsFrame.isEnabled = false;
+        builderLevelsFrame.isEnabled = false;
+
+        if (archerLevelsButton !is null) archerLevelsButton.rectColor = SColor(255, 255, 25, 55);
+        if (knightLevelsButton !is null) knightLevelsButton.rectColor = SColor(255, 155, 25, 55);
+        if (builderLevelsButton !is null) builderLevelsButton.rectColor = SColor(255, 155, 25, 55);
+    }
+    else if (name == "builderLevelsButton")
+    {
+        builderLevelsFrame.isEnabled = true;
+        knightLevelsFrame.isEnabled = false;
+        archerLevelsFrame.isEnabled = false;
+
+        if (builderLevelsButton !is null) builderLevelsButton.rectColor = SColor(255, 255, 25, 55);
+        if (knightLevelsButton !is null) knightLevelsButton.rectColor = SColor(255, 155, 25, 55);
+        if (archerLevelsButton !is null) archerLevelsButton.rectColor = SColor(255, 155, 25, 55);
+    }
 }
 
 void scrollerClickListener(int x, int y, int button, IGUIItem@ sender)

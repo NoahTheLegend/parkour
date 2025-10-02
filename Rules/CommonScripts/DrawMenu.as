@@ -39,6 +39,9 @@ Window@ menuWindow;
 Rectangle@ mainFrame;
 Rectangle@ infoFrame;
 Rectangle@ levelsFrame;
+Rectangle@ knightLevelsFrame;
+Rectangle@ archerLevelsFrame;
+Rectangle@ builderLevelsFrame;
 Rectangle@ helpFrame;
 Rectangle@ settingsFrame;
 Rectangle@ chessInfoFrame;
@@ -50,6 +53,9 @@ bool isGUINull()
 			|| @infoFrame == null
 			|| @mainFrame == null
 			|| @levelsFrame == null
+			|| @knightLevelsFrame == null
+			|| @archerLevelsFrame == null
+			|| @builderLevelsFrame == null
 			|| @helpFrame == null
 			|| @chessInfoFrame == null;
 }
@@ -59,19 +65,32 @@ bool isHidden()
     return !showMenu;
 }
 
+void LoadLevels()
+{
+	// knight
+	string k_path = "Rooms/Knight/";
+	string k_prefix = "k_";
+
+	Rectangle@ slider = cast<Rectangle@>(knightLevelsFrame.getChild("slider"));
+	for (uint i = 0; i < 512; i++)
+	{
+		string path = CFileMatcher(k_path + k_prefix + i + ".png").getFirst();
+		if (path != "")
+		{
+			//
+			Rectangle@ level = @Rectangle(Vec2f(0, 0), Vec2f(150, 100), SColor(255, 50, 50, 50));
+			level.name = "level_" + i;
+			slider.addChild(level);
+		}
+	}
+}
+
 void LoadVideos()
 {
 	f32 _10fps = 0.5f;
 	f32 _60fps = 3.0f / 1.0f;
 
-	help_videos.push_back(@VideoPlayer("Videos/Intro", Vec2f(650, 276), 0.5f, _10fps));
-	help_videos.push_back(@VideoPlayer("Videos/Proper_sliding", Vec2f(342, 241), 0.5f, _60fps));
-	help_videos.push_back(@VideoPlayer("Videos/Intro", Vec2f(650, 276), 0.5f, _10fps));
-	help_videos.push_back(@VideoPlayer("Videos/Intro", Vec2f(650, 276), 0.5f, _10fps));
-	help_videos.push_back(@VideoPlayer("Videos/Intro", Vec2f(650, 276), 0.5f, _10fps));
-	help_videos.push_back(@VideoPlayer("Videos/Intro", Vec2f(650, 276), 0.5f, _10fps));
-	help_videos.push_back(@VideoPlayer("Videos/Intro", Vec2f(650, 276), 0.5f, _10fps));
-	help_videos.push_back(@VideoPlayer("Videos/Intro", Vec2f(650, 276), 0.5f, _10fps));
+
 }
 
 void onInit(CRules@ this)
@@ -250,25 +269,113 @@ void InitializeGUI(CRules@ this)
 	levelsTitle.setText(levelsTitle.textWrap("Select a level (A/D)", title.font));
 	levelsFrame.addChild(levelsTitle);
 
-	// slider and scrollers for levels
-	Rectangle@ levelsFrameContentSlider = @Rectangle(mainFrame.localPosition + Vec2f(10, 32), mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
-	levelsFrameContentSlider.name = "slider";
-	levelsFrameContentSlider._customData = 0;
-	levelsFrame.addChild(levelsFrameContentSlider);
+	// LEVELS
 
-	Button@ levelsFrameScrollerLeft = @Button(scrollerLeftPos, scrollerLeftSize, "<", SColor(255, 255, 255, 255), "Terminus_18");
-	levelsFrameScrollerLeft.name = "levelsFrameScrollerLeft";
-	levelsFrameScrollerLeft.rectColor = SColor(255, 255, 25, 55);
-	levelsFrameScrollerLeft.addClickListener(scrollerClickListener);
-	levelsFrameScrollerLeft._customData = -1;
-	levelsFrame.addChild(levelsFrameScrollerLeft);
+	Vec2f levelsButtonSize = Vec2f(menuSize.x / 3 - 30, 30);
+	Vec2f starting_pos = Vec2f((menuSize.x - levelsButtonSize.x * 3) / 2, 80);
 
-	Button@ levelsFrameScrollerRight = @Button(scrollerRightPos, scrollerRightSize, ">", SColor(255, 255, 255, 255), "Terminus_18");
-	levelsFrameScrollerRight.name = "levelsFrameScrollerRight";
-	levelsFrameScrollerRight.rectColor = SColor(255, 255, 25, 55);
-	levelsFrameScrollerRight.addClickListener(scrollerClickListener);
-	levelsFrameScrollerRight._customData = 1;
-	levelsFrame.addChild(levelsFrameScrollerRight);
+	Vec2f knightButtonPos = Vec2f(starting_pos.x, 0);
+	Vec2f archerButtonPos = knightButtonPos + Vec2f(levelsButtonSize.x, 0);
+	Vec2f builderButtonPos = archerButtonPos + Vec2f(levelsButtonSize.x, 0);
+
+	// KNIGHT
+	Button@ knightLevelsButton = @Button(knightButtonPos, levelsButtonSize, "Knight Levels", SColor(255, 255, 255, 255), "Sakana_14");
+	knightLevelsButton.addClickListener(levelsClickListener);
+	knightLevelsButton.name = "knightLevelsButton";
+	knightLevelsButton.rectColor = SColor(255, 255, 25, 55);
+	levelsFrame.addChild(knightLevelsButton);
+
+	// knight levels frame
+	@knightLevelsFrame = @Rectangle(Vec2f_zero, mainFrame.size, mainFrame.color);
+	knightLevelsFrame.name = "knightLevelsFrame";
+	knightLevelsFrame.isEnabled = true; // default visible for knight levels
+	levelsFrame.addChild(knightLevelsFrame);
+
+	// slider and scrollers for knight levels
+	Rectangle@ knightLevelsFrameContentSlider = @Rectangle(mainFrame.localPosition + Vec2f(10, 32), mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
+	knightLevelsFrameContentSlider.name = "slider";
+	knightLevelsFrameContentSlider._customData = 0;
+	knightLevelsFrame.addChild(knightLevelsFrameContentSlider);
+
+	Button@ knightLevelsFrameScrollerLeft = @Button(scrollerLeftPos, scrollerLeftSize, "<", SColor(255, 255, 255, 255), "Terminus_18");
+	knightLevelsFrameScrollerLeft.name = "levelsFrameScrollerLeft";
+	knightLevelsFrameScrollerLeft.rectColor = SColor(255, 255, 25, 55);
+	knightLevelsFrameScrollerLeft.addClickListener(scrollerClickListener);
+	knightLevelsFrameScrollerLeft._customData = -1;
+	knightLevelsFrame.addChild(knightLevelsFrameScrollerLeft);
+
+	Button@ knightLevelsFrameScrollerRight = @Button(scrollerRightPos, scrollerRightSize, ">", SColor(255, 255, 255, 255), "Terminus_18");
+	knightLevelsFrameScrollerRight.name = "levelsFrameScrollerRight";
+	knightLevelsFrameScrollerRight.rectColor = SColor(255, 255, 25, 55);
+	knightLevelsFrameScrollerRight.addClickListener(scrollerClickListener);
+	knightLevelsFrameScrollerRight._customData = 1;
+	knightLevelsFrame.addChild(knightLevelsFrameScrollerRight);
+
+	// ARCHER
+	Button@ archerLevelsButton = @Button(archerButtonPos, levelsButtonSize, "Archer Levels", SColor(255, 255, 255, 255), "Sakana_14");
+	archerLevelsButton.addClickListener(levelsClickListener);
+	archerLevelsButton.name = "archerLevelsButton";
+	archerLevelsButton.rectColor = SColor(255, 155, 25, 55);
+	levelsFrame.addChild(archerLevelsButton);
+
+	// archer levels frame
+	@archerLevelsFrame = @Rectangle(Vec2f_zero, mainFrame.size, mainFrame.color);
+	archerLevelsFrame.name = "archerLevelsFrame";
+	archerLevelsFrame.isEnabled = false;
+	levelsFrame.addChild(archerLevelsFrame);
+
+	// slider and scrollers for archer levels
+	Rectangle@ archerLevelsFrameContentSlider = @Rectangle(mainFrame.localPosition + Vec2f(10, 32), mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
+	archerLevelsFrameContentSlider.name = "slider";
+	archerLevelsFrameContentSlider._customData = 0;
+	archerLevelsFrame.addChild(archerLevelsFrameContentSlider);
+
+	Button@ archerLevelsFrameScrollerLeft = @Button(scrollerLeftPos, scrollerLeftSize, "<", SColor(255, 255, 255, 255), "Terminus_18");
+	archerLevelsFrameScrollerLeft.name = "levelsFrameScrollerLeft";
+	archerLevelsFrameScrollerLeft.rectColor = SColor(255, 255, 25, 55);
+	archerLevelsFrameScrollerLeft.addClickListener(scrollerClickListener);
+	archerLevelsFrameScrollerLeft._customData = -1;
+	archerLevelsFrame.addChild(archerLevelsFrameScrollerLeft);
+
+	Button@ archerLevelsFrameScrollerRight = @Button(scrollerRightPos, scrollerRightSize, ">", SColor(255, 255, 255, 255), "Terminus_18");
+	archerLevelsFrameScrollerRight.name = "levelsFrameScrollerRight";
+	archerLevelsFrameScrollerRight.rectColor = SColor(255, 255, 25, 55);
+	archerLevelsFrameScrollerRight.addClickListener(scrollerClickListener);
+	archerLevelsFrameScrollerRight._customData = 1;
+	archerLevelsFrame.addChild(archerLevelsFrameScrollerRight);
+
+	// BUILDER
+	Button@ builderLevelsButton = @Button(builderButtonPos, levelsButtonSize, "Builder Levels", SColor(255, 255, 255, 255), "Sakana_14");
+	builderLevelsButton.addClickListener(levelsClickListener);
+	builderLevelsButton.name = "builderLevelsButton";
+	builderLevelsButton.rectColor = SColor(255, 155, 25, 55);
+	levelsFrame.addChild(builderLevelsButton);
+
+	// builder levels frame
+	@builderLevelsFrame = @Rectangle(Vec2f_zero, mainFrame.size, mainFrame.color);
+	builderLevelsFrame.name = "builderLevelsFrame";
+	builderLevelsFrame.isEnabled = false;
+	levelsFrame.addChild(builderLevelsFrame);
+
+	// slider and scrollers for builder levels
+	Rectangle@ builderLevelsFrameContentSlider = @Rectangle(mainFrame.localPosition + Vec2f(10, 32), mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
+	builderLevelsFrameContentSlider.name = "slider";
+	builderLevelsFrameContentSlider._customData = 0;
+	builderLevelsFrame.addChild(builderLevelsFrameContentSlider);
+
+	Button@ builderLevelsFrameScrollerLeft = @Button(scrollerLeftPos, scrollerLeftSize, "<", SColor(255, 255, 255, 255), "Terminus_18");
+	builderLevelsFrameScrollerLeft.name = "levelsFrameScrollerLeft";
+	builderLevelsFrameScrollerLeft.rectColor = SColor(255, 255, 25, 55);
+	builderLevelsFrameScrollerLeft.addClickListener(scrollerClickListener);
+	builderLevelsFrameScrollerLeft._customData = -1;
+	builderLevelsFrame.addChild(builderLevelsFrameScrollerLeft);
+
+	Button@ builderLevelsFrameScrollerRight = @Button(scrollerRightPos, scrollerRightSize, ">", SColor(255, 255, 255, 255), "Terminus_18");
+	builderLevelsFrameScrollerRight.name = "levelsFrameScrollerRight";
+	builderLevelsFrameScrollerRight.rectColor = SColor(255, 255, 25, 55);
+	builderLevelsFrameScrollerRight.addClickListener(scrollerClickListener);
+	builderLevelsFrameScrollerRight._customData = 1;
+	builderLevelsFrame.addChild(builderLevelsFrameScrollerRight);
 
 	// help frame
 	Button@ helpButton = @Button(Vec2f(menuSize.x - 300, 0), Vec2f(100, 30), "Help", SColor(255, 255, 255, 255), "Sakana_16");
