@@ -58,17 +58,15 @@ bool isHidden()
     return !showMenu;
 }
 
-void onReload(CRules@ this)
-{
-	LoadVideos();
-}
-
 void LoadVideos()
 {
 	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
 	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
 	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
 	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
+	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
+	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
+
 	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
 	help_videos.push_back(@VideoPlayer("Videos/Other/Intro", Vec2f(650, 276), 0.5f, 1));
 }
@@ -78,8 +76,6 @@ void onInit(CRules@ this)
 	this.set_bool("GUI initialized", false);
 	this.addCommandID("join");
 	u_showtutorial = true;
-
-	LoadVideos();
 
 	string configstr = "../Cache/NoahsParkour.cfg";
 	ConfigFile cfg = ConfigFile(configstr);
@@ -95,6 +91,7 @@ void onTick(CRules@ this)
 	bool initialized = this.get_bool("GUI initialized");
 	if ((!initialized || isGUINull()))
 	{
+		LoadVideos(); // must be before InitializeGUI
         InitializeGUI(this);
 
 		updateOptionSliderValues();
@@ -107,9 +104,56 @@ void onTick(CRules@ this)
 	CPlayer@ player = getLocalPlayer();  
 	if (player is null) return;
 
+	HandleInput(this, controls, player);
+
 	string name = player.getUsername();
     bool previous_showMenu = showMenu; // must be last
 	this.set_bool("showMenu", showMenu);
+}
+
+void HandleInput(CRules@ rules, CControls@ controls, CPlayer@ player)
+{
+	if (!showMenu) return;
+
+	// A / D interaction
+	if (controls.isKeyJustPressed(KEY_KEY_A))
+	{
+		if (helpFrame.isEnabled)
+		{
+			Button@ scroller = cast<Button@>(helpFrame.getChild("helpFrameScrollerLeft"));
+			if (scroller is null) return;
+
+			Vec2f scroller_pos = scroller.getAbsolutePosition();
+			scrollerClickListener(scroller_pos.x, scroller_pos.y + 1, 1, scroller);
+		}
+		else if (levelsFrame.isEnabled)
+		{
+			Button@ scroller = cast<Button@>(levelsFrame.getChild("levelsFrameScrollerLeft"));
+			if (scroller is null) return;
+
+			Vec2f scroller_pos = scroller.getAbsolutePosition();
+			scrollerClickListener(scroller_pos.x, scroller_pos.y + 1, 1, scroller);
+		}
+	}
+	else if (controls.isKeyJustPressed(KEY_KEY_D))
+	{
+		if (helpFrame.isEnabled)
+		{
+			Button@ scroller = cast<Button@>(helpFrame.getChild("helpFrameScrollerRight"));
+			if (scroller is null) return;
+
+			Vec2f scroller_pos = scroller.getAbsolutePosition();
+			scrollerClickListener(scroller_pos.x, scroller_pos.y + 1, 1, scroller);
+		}
+		else if (levelsFrame.isEnabled)
+		{
+			Button@ scroller = cast<Button@>(levelsFrame.getChild("levelsFrameScrollerRight"));
+			if (scroller is null) return;
+
+			Vec2f scroller_pos = scroller.getAbsolutePosition();
+			scrollerClickListener(scroller_pos.x, scroller_pos.y + 1, 1, scroller);
+		}
+	}
 }
 
 void InitializeGUI(CRules@ this)
@@ -238,21 +282,22 @@ void InitializeGUI(CRules@ this)
 
 	Label@ helpTitle = @Label(title.localPosition, title.size, "", SColor(255, 0, 0, 0), true, title.font);
 	helpTitle.name = "title";
-	helpTitle.setText(helpTitle.textWrap("Hover on the videos to watch them (A/D)", title.font));
+	helpTitle.setText(helpTitle.textWrap("Hover on the videos to watch them (A/D) [01]", title.font));
 	helpFrame.addChild(helpTitle);
 
 	// slider and scrollers
 	Rectangle@ helpFrameContentSlider = @Rectangle(mainFrame.localPosition + Vec2f(10, 32), mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
 	helpFrameContentSlider.name = "slider";
-	helpFrameContentSlider._customData = 0;
+	helpFrameContentSlider._customData = -1; // sign for init
 	helpFrame.addChild(helpFrameContentSlider);
 
 	Button@ helpFrameScrollerLeft = @Button(scrollerLeftPos, scrollerLeftSize, "<", SColor(255, 255, 255, 255), "Terminus_18");
 	helpFrameScrollerLeft.name = "helpFrameScrollerLeft";
 	helpFrameScrollerLeft.rectColor = SColor(255, 65, 185, 85);
-	helpFrameScrollerLeft.addClickListener(scrollerClickListener);
+	
 	helpFrameScrollerLeft._customData = -1;
 	helpFrame.addChild(helpFrameScrollerLeft);
+	helpFrameScrollerLeft.addClickListener(scrollerClickListener);
 
 	Button@ helpFrameScrollerRight = @Button(scrollerRightPos, scrollerRightSize, ">", SColor(255, 255, 255, 255), "Terminus_18");
 	helpFrameScrollerRight.name = "helpFrameScrollerRight";
@@ -450,7 +495,6 @@ void onRender(CRules@ this)
 	if (controls is null) return;
 
 	Vec2f screen_size = driver.getScreenDimensions();
-
 	if (this.exists("warn_menu_movement"))
 	{
 		Vec2f cursor_pos = controls.getInterpMouseScreenPos();
@@ -499,7 +543,12 @@ void onRender(CRules@ this)
 	Vec2f posShown = getMenuPosShown();
 
 	active_time = showMenu ? active_time + 1.0f / tick : 0;
-	menuWindow.setPosition(Vec2f_lerp(menuWindow.localPosition, showMenu ? posShown : posHidden, 0.35f));
+	Vec2f new_position = Vec2f_lerp(menuWindow.localPosition, showMenu ? posShown : posHidden, 0.35f);
+	if (menuWindow.localPosition != new_position)
+	{
+		UpdateHelpFrameVideos(cast<Rectangle@>(helpFrame.getChild("slider")), Vec2f(3, 2));
+	}
+	menuWindow.setPosition(new_position);
 
 	Button@ switcher = cast<Button@>(menuWindow.getChild("switchButton"));
 	if (switcher !is null)
@@ -507,7 +556,7 @@ void onRender(CRules@ this)
 		switcher.setPosition(Vec2f_lerp(switcher.localPosition, switcher.initialPosition + Vec2f(0, showMenu ? 30 : 0), 0.35f));
 	}
 
-	RenderShownVideos(active_help_videos, active_help_video_positions);
+	RenderShownVideos(active_help_videos, active_help_video_positions, showMenu);
 
 	bool initialized = this.get_bool("GUI initialized");
 	if (!initialized) return;

@@ -57,6 +57,9 @@ void pageClickListener(int x, int y, int button, IGUIItem@ sender)
     bool at_least_one_enabled = false;
     string name = btn.name;
 
+    active_help_videos.clear();
+    active_help_video_positions.clear();
+
     if (name == "infoButton")
     {
         infoFrame.isEnabled = !infoFrameEnabled;
@@ -64,13 +67,30 @@ void pageClickListener(int x, int y, int button, IGUIItem@ sender)
     }
     else if (name == "levelsButton")
     {
-        levelsFrame.isEnabled = !levelsFrame.isEnabled;
+        levelsFrame.isEnabled = !levelsFrameEnabled;
         at_least_one_enabled = levelsFrame.isEnabled;
     }
     else if (name == "helpButton")
     {
-        helpFrame.isEnabled = !helpFrame.isEnabled;
+        helpFrame.isEnabled = !helpFrameEnabled;
         at_least_one_enabled = helpFrame.isEnabled;
+
+        if (helpFrame.isEnabled)
+        {
+            UpdateHelpFrameVideos(cast<Rectangle@>(helpFrame.getChild("slider")), Vec2f(3, 2));
+
+            Rectangle@ slider = cast<Rectangle@>(helpFrame.getChild("slider"));
+            if (slider is null) return;
+
+            if (slider._customData == -1)
+            {
+                Button@ helpFrameScrollerLeft = cast<Button@>(helpFrame.getChild("helpFrameScrollerLeft"));
+                if (helpFrameScrollerLeft is null) return;
+
+                Vec2f scroller_pos = helpFrameScrollerLeft.getAbsolutePosition();
+	            scrollerClickListener(scroller_pos.x, scroller_pos.y + 1, 1, helpFrameScrollerLeft);
+            }
+        }
     }
     else if (name == "settingsButton")
     {
@@ -86,7 +106,10 @@ void pageClickListener(int x, int y, int button, IGUIItem@ sender)
     if (!at_least_one_enabled)
     {
         mainFrame.isEnabled = true;
-
+        infoFrame.isEnabled = false;
+        levelsFrame.isEnabled = false;
+        helpFrame.isEnabled = false;
+        settingsFrame.isEnabled = false;
         chessInfoFrame.isEnabled = false;
     }
 
@@ -122,40 +145,61 @@ void scrollerClickListener(int x, int y, int button, IGUIItem@ sender)
 
     Vec2f grid = Vec2f(3, 2);
     slider._customData += data;
-    slider._customData = Maths::Clamp(slider._customData, 0, slider.children.size() / (grid.x * grid.y) - 1);
+
+    slider._customData = Maths::Clamp(slider._customData, 0, help_videos.size() / (grid.x * grid.y));
 
     if (parent.name == "helpFrame")
     {
-        u8 showing_page = slider._customData;
-        u8 showing_count = grid.x * grid.y;
-        Vec2f starting_position = parent.getAbsolutePosition() + Vec2f(50, 25); // debug test for now
+        UpdateHelpFrameVideos(slider, grid);
+    }
+}
 
-        // set all to hidden first
-        for (uint i = 0; i < active_help_videos.size(); i++)
+void UpdateHelpFrameVideos(Rectangle@ slider, Vec2f grid)
+{
+    Label@ parent_title = cast<Label@>(helpFrame.getChild("title"));
+    if (parent_title !is null)
+    {
+        int suffix = parent_title.label.findLast("[");
+        if (suffix != -1)
         {
-            if (active_help_videos[i] is null) continue;
-            active_help_videos[i].hide();
+            // replace suffix of current page and format to [01]
+            string base_label = parent_title.label.substr(0, suffix);
+            int page_num = slider._customData + 1;
+            string page_str = page_num < 10 ? "0" + page_num : "" + page_num;
+            parent_title.label = base_label + "[" + page_str + "]";
         }
-        active_help_videos.clear();
-        active_help_video_positions.clear();
+    }
+    int showing_page = slider._customData;
+    int showing_count = int(grid.x * grid.y);
+    Vec2f starting_position = helpFrame.getAbsolutePosition() + Vec2f(50, 25);
 
-        // then show showing_count with starting index depending on the page
-        for (uint i = 0; i < showing_count; i++)
-        {
-            uint index = i + (showing_page * showing_count);
-            if (index >= help_videos.size()) break;
-            if (help_videos[index] is null) continue;
+    // set all to hidden first
+    for (uint i = 0; i < active_help_videos.size(); i++)
+    {
+        if (active_help_videos[i] is null) continue;
+        active_help_videos[i].hide();
+    }
 
-            active_help_videos.push_back(@help_videos[index]);
-            Vec2f parent_size = parent.size - Vec2f(100, 50);
-            Vec2f new_size = Vec2f(parent_size.x / grid.x, parent_size.y / grid.y);
-            help_videos[index].rescale(new_size * 0.5f);
+    active_help_videos.clear();
+    active_help_video_positions.clear();
 
-            Vec2f pos = starting_position + Vec2f(i % int(grid.x) * new_size.x, i / int(grid.x) * new_size.y);
-            active_help_video_positions.push_back(pos);
-
-            help_videos[index].show();
-        }
+    // then show showing_count with starting index depending on the page
+    for (uint i = 0; i < showing_count; i++)
+    {
+        uint index = i + (showing_page * showing_count);
+        if (index >= help_videos.size()) break;
+        if (help_videos[index] is null) continue;
+        active_help_videos.push_back(@help_videos[index]);
+        Vec2f gap = Vec2f(0, 0);
+        Vec2f parent_size = helpFrame.size - Vec2f(100, 50);
+        Vec2f new_size = Vec2f(
+            (parent_size.x - (grid.x - 1) * gap.x) / grid.x,
+            (parent_size.y - (grid.y - 1) * gap.y) / grid.y
+        );
+        help_videos[index].rescale(new_size * 0.5f);
+        Vec2f pos = starting_position + Vec2f(i % int(grid.x) * (new_size.x + gap.x), i / int(grid.x) * (new_size.y + gap.y));
+        active_help_video_positions.push_back(pos);
+        help_videos[index].show();
     }
 }
 
