@@ -9,6 +9,7 @@ const Vec2f menuSize = Vec2f(500, 400);
 const f32 slideOffset = 100.0f; // extra height
 const u32 warn_menu_movement_time = 30;
 const Vec2f default_grid = Vec2f(3, 4);
+const Vec2f default_grid_levels = Vec2f(3, 3);
 
 VideoPlayer@[] help_videos;
 
@@ -71,18 +72,44 @@ void LoadLevels()
 	string k_path = "Rooms/Knight/";
 	string k_prefix = "k_";
 
+	u32 level_count = 0;
 	Rectangle@ slider = cast<Rectangle@>(knightLevelsFrame.getChild("slider"));
 	for (uint i = 0; i < 512; i++)
 	{
 		string path = CFileMatcher(k_path + k_prefix + i + ".png").getFirst();
 		if (path != "")
 		{
-			//
-			Rectangle@ level = @Rectangle(Vec2f(0, 0), Vec2f(150, 100), SColor(255, 50, 50, 50));
-			level.name = "level_" + i;
+			CFileImage@ img = @CFileImage(path);
+			if (img is null) continue;
+			Vec2f img_size = Vec2f(img.getWidth(), img.getHeight());
+
+			Rectangle@ level = @Rectangle(Vec2f(0, 0), img_size, SColor(0, 225, 179, 126));
+			level.name = "" + i;
 			slider.addChild(level);
+
+			Icon@ icon = @Icon(path, -img_size / 2, img_size, 0, 1.0f, false);
+			icon.name = "icon";
+			level.addChild(icon);
+
+			Button@ text_pane = @Button(Vec2f_zero, Vec2f(40, 20), "", SColor(255, 0, 0, 0), "Terminus_12");
+			text_pane.name = "text_pane";
+			text_pane.rectColor = SColor(255, 255, 0, 0);
+			level.addChild(text_pane);
+
+			Vec2f pane_size = Vec2f(text_pane.size.x / 2 - 2, 8);
+			Label@ text = @Label(pane_size, pane_size, "" + i, SColor(255, 255, 255, 255), true, "Terminus_12");
+			text_pane.addChild(text);
+
+			level_count++;
+		}
+		else
+		{
+			break;
 		}
 	}
+
+	print("Loaded " + level_count + " knight levels");
+	level_count = 0;
 }
 
 void LoadVideos()
@@ -115,6 +142,7 @@ void onTick(CRules@ this)
 	{
 		LoadVideos(); // must be before InitializeGUI
         InitializeGUI(this);
+		LoadLevels(); // must be after InitializeGUI
 
 		updateOptionSliderValues();
     	setCachedStates(this);
@@ -150,8 +178,29 @@ void HandleInput(CRules@ rules, CControls@ controls, CPlayer@ player)
 		}
 		else if (levelsFrame.isEnabled)
 		{
-			Button@ scroller = cast<Button@>(levelsFrame.getChild("levelsFrameScrollerLeft"));
-			if (scroller is null) return;
+			
+			bool knight_levels = knightLevelsFrame.isEnabled;
+			bool archer_levels = archerLevelsFrame.isEnabled;
+			bool builder_levels = builderLevelsFrame.isEnabled;
+	
+			Button@ scroller;
+			Rectangle@ slider;
+
+			if (knight_levels)
+			{
+				@scroller = cast<Button@>(levelsFrame.getChild("knightLevelsFrame").getChild("levelsFrameScrollerLeft"));
+				@slider = cast<Rectangle@>(levelsFrame.getChild("knightLevelsFrame").getChild("slider"));
+			}
+			else if (archer_levels)
+			{
+				@scroller = cast<Button@>(levelsFrame.getChild("archerLevelsFrame").getChild("levelsFrameScrollerLeft"));
+				@slider = cast<Rectangle@>(levelsFrame.getChild("archerLevelsFrame").getChild("slider"));
+			}
+			else if (builder_levels)
+			{
+				@scroller = cast<Button@>(levelsFrame.getChild("builderLevelsFrame").getChild("levelsFrameScrollerLeft"));
+				@slider = cast<Rectangle@>(levelsFrame.getChild("builderLevelsFrame").getChild("slider"));
+			}
 
 			Vec2f scroller_pos = scroller.getAbsolutePosition();
 			scrollerClickListener(scroller_pos.x, scroller_pos.y + 1, 1, scroller);
@@ -169,8 +218,28 @@ void HandleInput(CRules@ rules, CControls@ controls, CPlayer@ player)
 		}
 		else if (levelsFrame.isEnabled)
 		{
-			Button@ scroller = cast<Button@>(levelsFrame.getChild("levelsFrameScrollerRight"));
-			if (scroller is null) return;
+			bool knight_levels = knightLevelsFrame.isEnabled;
+			bool archer_levels = archerLevelsFrame.isEnabled;
+			bool builder_levels = builderLevelsFrame.isEnabled;
+	
+			Button@ scroller;
+			Rectangle@ slider;
+
+			if (knight_levels)
+			{
+				@scroller = cast<Button@>(levelsFrame.getChild("knightLevelsFrame").getChild("levelsFrameScrollerRight"));
+				@slider = cast<Rectangle@>(levelsFrame.getChild("knightLevelsFrame").getChild("slider"));
+			}
+			else if (archer_levels)
+			{
+				@scroller = cast<Button@>(levelsFrame.getChild("archerLevelsFrame").getChild("levelsFrameScrollerRight"));
+				@slider = cast<Rectangle@>(levelsFrame.getChild("archerLevelsFrame").getChild("slider"));
+			}
+			else if (builder_levels)
+			{
+				@scroller = cast<Button@>(levelsFrame.getChild("builderLevelsFrame").getChild("levelsFrameScrollerRight"));
+				@slider = cast<Rectangle@>(levelsFrame.getChild("builderLevelsFrame").getChild("slider"));
+			}
 
 			Vec2f scroller_pos = scroller.getAbsolutePosition();
 			scrollerClickListener(scroller_pos.x, scroller_pos.y + 1, 1, scroller);
@@ -210,7 +279,7 @@ void InitializeGUI(CRules@ this)
 
 	Label@ subtitle = @Label(Vec2f(8, 26), Vec2f(frameSize.x - 12, 16), "", SColor(255, 0, 0, 0), false, "Terminus_14");
 	subtitle.name = "subtitle";
-	subtitle.setText(subtitle.textWrap("* Load a level into your room to start.\n\n* Your room is inside the white square.\n\n* You can create and load own levels right now - see \"Help\".\n\n* Navigate through the menu for more info.", "Terminus_14"));
+	subtitle.setText(subtitle.textWrap("* Load a level into your room to start.\n\n* Write !create to make a room, it is located inside the white square.\n\n* You can create and load own levels! Write !editor, !save [name], or !load [name]. ((todo: path))\n\n* Navigate through the menu for more info.", "Terminus_14"));
 	mainFrame.addChild(subtitle);
 
 	// switchers
@@ -243,7 +312,7 @@ void InitializeGUI(CRules@ this)
 
 	Label@ infoSubtitle = @Label(subtitle.localPosition, subtitle.size, "", SColor(255, 0, 0, 0), false, subtitle.font);
 	infoSubtitle.name = "subtitle";
-	infoSubtitle.setText(infoSubtitle.textWrap("Each of the official levels is possible to complete, and all of them have been at least one time.\nSome levels, though, require you to know theory and the moveset.\nEnable path line in settings and watch particular videos in \"Help\" section if you are stuck.", subtitle.font));
+	infoSubtitle.setText(infoSubtitle.textWrap("* Each of the official levels is possible to complete.\n\nSome levels, though, require you to know theory and the moveset.\n\nEnable the path line in settings and watch particular videos in \"Help\" section if you are stuck.", subtitle.font));
 	infoFrame.addChild(infoSubtitle);
 
 	Vec2f scrollerLeftPos = Vec2f(10, 25);
@@ -279,7 +348,7 @@ void InitializeGUI(CRules@ this)
 	Vec2f builderButtonPos = archerButtonPos + Vec2f(levelsButtonSize.x, 0);
 
 	// KNIGHT
-	Button@ knightLevelsButton = @Button(knightButtonPos, levelsButtonSize, "Knight Levels", SColor(255, 255, 255, 255), "Sakana_14");
+	Button@ knightLevelsButton = @Button(knightButtonPos, levelsButtonSize, "Knight", SColor(255, 255, 255, 255), "Sakana_14");
 	knightLevelsButton.addClickListener(levelsClickListener);
 	knightLevelsButton.name = "knightLevelsButton";
 	knightLevelsButton.rectColor = SColor(255, 255, 25, 55);
@@ -294,7 +363,7 @@ void InitializeGUI(CRules@ this)
 	// slider and scrollers for knight levels
 	Rectangle@ knightLevelsFrameContentSlider = @Rectangle(mainFrame.localPosition + Vec2f(10, 32), mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
 	knightLevelsFrameContentSlider.name = "slider";
-	knightLevelsFrameContentSlider._customData = 0;
+	knightLevelsFrameContentSlider._customData = -1;
 	knightLevelsFrame.addChild(knightLevelsFrameContentSlider);
 
 	Button@ knightLevelsFrameScrollerLeft = @Button(scrollerLeftPos, scrollerLeftSize, "<", SColor(255, 255, 255, 255), "Terminus_18");
@@ -312,7 +381,7 @@ void InitializeGUI(CRules@ this)
 	knightLevelsFrame.addChild(knightLevelsFrameScrollerRight);
 
 	// ARCHER
-	Button@ archerLevelsButton = @Button(archerButtonPos, levelsButtonSize, "Archer Levels", SColor(255, 255, 255, 255), "Sakana_14");
+	Button@ archerLevelsButton = @Button(archerButtonPos, levelsButtonSize, "Archer", SColor(255, 255, 255, 255), "Sakana_14");
 	archerLevelsButton.addClickListener(levelsClickListener);
 	archerLevelsButton.name = "archerLevelsButton";
 	archerLevelsButton.rectColor = SColor(255, 155, 25, 55);
@@ -327,7 +396,7 @@ void InitializeGUI(CRules@ this)
 	// slider and scrollers for archer levels
 	Rectangle@ archerLevelsFrameContentSlider = @Rectangle(mainFrame.localPosition + Vec2f(10, 32), mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
 	archerLevelsFrameContentSlider.name = "slider";
-	archerLevelsFrameContentSlider._customData = 0;
+	archerLevelsFrameContentSlider._customData = -1;
 	archerLevelsFrame.addChild(archerLevelsFrameContentSlider);
 
 	Button@ archerLevelsFrameScrollerLeft = @Button(scrollerLeftPos, scrollerLeftSize, "<", SColor(255, 255, 255, 255), "Terminus_18");
@@ -345,7 +414,7 @@ void InitializeGUI(CRules@ this)
 	archerLevelsFrame.addChild(archerLevelsFrameScrollerRight);
 
 	// BUILDER
-	Button@ builderLevelsButton = @Button(builderButtonPos, levelsButtonSize, "Builder Levels", SColor(255, 255, 255, 255), "Sakana_14");
+	Button@ builderLevelsButton = @Button(builderButtonPos, levelsButtonSize, "Builder", SColor(255, 255, 255, 255), "Sakana_14");
 	builderLevelsButton.addClickListener(levelsClickListener);
 	builderLevelsButton.name = "builderLevelsButton";
 	builderLevelsButton.rectColor = SColor(255, 155, 25, 55);
@@ -360,7 +429,7 @@ void InitializeGUI(CRules@ this)
 	// slider and scrollers for builder levels
 	Rectangle@ builderLevelsFrameContentSlider = @Rectangle(mainFrame.localPosition + Vec2f(10, 32), mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
 	builderLevelsFrameContentSlider.name = "slider";
-	builderLevelsFrameContentSlider._customData = 0;
+	builderLevelsFrameContentSlider._customData = -1;
 	builderLevelsFrame.addChild(builderLevelsFrameContentSlider);
 
 	Button@ builderLevelsFrameScrollerLeft = @Button(scrollerLeftPos, scrollerLeftSize, "<", SColor(255, 255, 255, 255), "Terminus_18");

@@ -1291,7 +1291,7 @@ class Icon : GenericGUIItem
 	}
 }
 
-class Anim{
+class Anim {
 	int[] index;
 	int frame,freq;
 	string iconName, image;

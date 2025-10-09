@@ -59,6 +59,21 @@ void pageClickListener(int x, int y, int button, IGUIItem@ sender)
     {
         levelsFrame.isEnabled = !levelsFrameEnabled;
         at_least_one_enabled = levelsFrame.isEnabled;
+
+        if (levelsFrame.isEnabled)
+        {
+            Rectangle@ slider = cast<Rectangle@>(knightLevelsFrame.getChild("slider"));
+            if (slider is null) return;
+
+            if (slider._customData == -1)
+            {
+                Button@ levelsFrameScrollerLeft = cast<Button@>(knightLevelsFrame.getChild("levelsFrameScrollerLeft"));
+                if (levelsFrameScrollerLeft is null) return;
+
+                Vec2f scroller_pos = levelsFrameScrollerLeft.getAbsolutePosition();
+                scrollerClickListener(scroller_pos.x, scroller_pos.y + 1, 1, levelsFrameScrollerLeft);
+            }
+        }
     }
     else if (name == "helpButton")
     {
@@ -74,7 +89,6 @@ void pageClickListener(int x, int y, int button, IGUIItem@ sender)
 
             if (slider._customData == -1)
             {
-                // todo: rework this to not use a fake button press
                 Button@ helpFrameScrollerLeft = cast<Button@>(helpFrame.getChild("helpFrameScrollerLeft"));
                 if (helpFrameScrollerLeft is null) return;
 
@@ -173,8 +187,12 @@ void levelsClickListener(int x, int y, int button, IGUIItem@ sender)
     Button@ builderLevelsButton = cast<Button@>(levelsFrame.getChild("builderLevelsButton"));
 
     string name = btn.name;
+    Rectangle@ selected_frame;
+
     if (name == "knightLevelsButton")
     {
+        @selected_frame = @knightLevelsFrame;
+
         knightLevelsFrame.isEnabled = true;
         archerLevelsFrame.isEnabled = false;
         builderLevelsFrame.isEnabled = false;
@@ -185,6 +203,8 @@ void levelsClickListener(int x, int y, int button, IGUIItem@ sender)
     }
     else if (name == "archerLevelsButton")
     {
+        @selected_frame = @archerLevelsFrame;
+
         archerLevelsFrame.isEnabled = true;
         knightLevelsFrame.isEnabled = false;
         builderLevelsFrame.isEnabled = false;
@@ -195,6 +215,8 @@ void levelsClickListener(int x, int y, int button, IGUIItem@ sender)
     }
     else if (name == "builderLevelsButton")
     {
+        @selected_frame = @builderLevelsFrame;
+
         builderLevelsFrame.isEnabled = true;
         knightLevelsFrame.isEnabled = false;
         archerLevelsFrame.isEnabled = false;
@@ -203,6 +225,124 @@ void levelsClickListener(int x, int y, int button, IGUIItem@ sender)
         if (knightLevelsButton !is null) knightLevelsButton.rectColor = SColor(255, 155, 25, 55);
         if (archerLevelsButton !is null) archerLevelsButton.rectColor = SColor(255, 155, 25, 55);
     }
+
+    // build levels grid using UpdateHelpFrameVideos as reference
+    if (selected_frame !is null && selected_frame.isEnabled)
+    {
+        Rectangle@ slider = cast<Rectangle@>(selected_frame.getChild("slider"));
+        if (slider is null) return;
+
+        //slider._customData = 0; // reset to first page
+        Vec2f grid = default_grid_levels;
+        UpdateLevels(slider, grid);
+    }
+}
+
+void UpdateLevels(Rectangle@ slider, Vec2f grid)
+{
+    const bool debug_levels_bg = false; // set to true to enable debug background coloring
+
+    int showing_page = slider._customData;
+    int showing_count = int(grid.x * grid.y);
+    Vec2f starting_position = Vec2f(64, -40);
+
+    // hide all children first
+    for (uint i = 0; i < slider.children.size(); i++)
+    {
+        Rectangle@ child = cast<Rectangle@>(slider.children[i]);
+        if (child is null) continue;
+        child.isEnabled = false;
+    }
+
+    // prepare row/column sizes
+    array<float> col_widths(int(grid.x), 0.0f);
+    array<float> row_heights(int(grid.y), 0.0f);
+
+    const f32 offsetx = 40.0f;
+    const f32 offsety = 125.0f;
+
+    // calculate max width/height per column/row
+    for (uint i = 0; i < showing_count; i++)
+    {
+        uint index = i + (showing_page * showing_count);
+        if (index >= slider.children.size()) break;
+
+        Rectangle@ child = cast<Rectangle@>(slider.children[index]);
+        if (child is null) continue;
+
+        Icon@ icon = cast<Icon@>(child.getChild("icon"));
+        Vec2f icon_size = child.size;
+        if (icon !is null)
+        {
+            icon_size = icon.size;
+        }
+
+        int col = i % int(grid.x);
+        int row = i / int(grid.x); // FIXED: use grid.x for columns, grid.y for rows
+
+        if (icon_size.x > col_widths[col]) col_widths[col] = icon_size.x;
+        if (icon_size.y > row_heights[row]) row_heights[row] = icon_size.y;
+    }
+
+    // calculate max allowed gap so total width/height does not exceed parent size
+    float max_gap_x = 0.0f;
+    float max_gap_y = 0.0f;
+    if (col_widths.size() > 1)
+    {
+        float total_width = sum(col_widths);
+        float available_width = slider.size.x - starting_position.x * 2 - offsetx;
+        max_gap_x = Maths::Max(0.0f, (available_width - total_width) / (col_widths.size() - 1));
+    }
+    if (row_heights.size() > 1)
+    {
+        float total_height = sum(row_heights);
+        float available_height = slider.size.y - starting_position.y * 2 - offsety;
+        max_gap_y = Maths::Max(0.0f, (available_height - total_height) / (row_heights.size() - 1));
+    }
+
+    // position and enable children with limited gaps
+    for (uint i = 0; i < showing_count; i++)
+    {
+        uint index = i + (showing_page * showing_count);
+        if (index >= slider.children.size()) break;
+
+        Rectangle@ child = cast<Rectangle@>(slider.children[index]);
+        if (child is null) continue;
+
+        int col = i % int(grid.x);
+        int row = i / int(grid.x);
+
+        float x = 0.0f;
+        for (int c = 0; c < col; c++)
+            x += col_widths[c] + max_gap_x;
+
+        float y = 0.0f;
+        for (int r = 0; r < row; r++)
+            y += row_heights[r] + max_gap_y;
+
+        Vec2f pos = starting_position + Vec2f(x, y);
+        Vec2f new_size = Vec2f(col_widths[col], row_heights[row]);
+
+        child.setPosition(pos);
+        child.isEnabled = true;
+
+        Button@ text_pane = cast<Button@>(child.getChild("text_pane"));
+        if (text_pane !is null)
+            text_pane.setPosition(Vec2f((child.size.x - text_pane.size.x) / 2, new_size.y - text_pane.size.y * 2));
+
+        if (debug_levels_bg)
+        {
+            int shade = Maths::Clamp(255 - i * 5, 0, 255);
+            child.color = SColor(255, shade, shade, shade);
+        }
+    }
+}
+
+float sum(array<float>@ arr)
+{
+    float s = 0.0f;
+    for (uint i = 0; i < arr.size(); i++) s += arr[i];
+    return s;
 }
 
 void scrollerClickListener(int x, int y, int button, IGUIItem@ sender)
@@ -220,14 +360,20 @@ void scrollerClickListener(int x, int y, int button, IGUIItem@ sender)
     Rectangle@ slider = cast<Rectangle@>(parent.getChild("slider"));
     if (slider is null) return;
 
-    Vec2f grid = default_grid;
     slider._customData += data;
-    slider._customData = Maths::Clamp(slider._customData, 0, help_videos.size() / (grid.x * grid.y));
-
     if (parent.name == "helpFrame")
     {
+        Vec2f grid = default_grid;
+        slider._customData = Maths::Clamp(slider._customData, 0, help_videos.size() / (grid.x * grid.y));
         UpdateHelpFrameVideos(slider, grid);
     }
+    else if (parent.name == "knightLevelsFrame" || parent.name == "archerLevelsFrame" || parent.name == "builderLevelsFrame")
+    {
+        Vec2f grid = default_grid_levels;
+        slider._customData = Maths::Clamp(slider._customData, 0, slider.children.size() / (grid.x * grid.y));
+        UpdateLevels(slider, grid);
+    }
+
 }
 
 // TODO: needs a huge rework (this dogshit is unreadable)
