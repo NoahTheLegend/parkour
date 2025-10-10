@@ -1,14 +1,6 @@
 #include "PNGLoader.as";
+#include "RoomsCommon.as";
 
-namespace RoomType {
-    enum RoomType {
-        knight = 0,
-        archer,
-        builder
-    };
-};
-
-Vec2f ROOM_SIZE = Vec2f(100, 100) * 8;
 void onInit(CRules@ this)
 {
     CreateRoomsGrid(this);
@@ -19,59 +11,6 @@ void onInit(CRules@ this)
         params.write_bool(true); // request sync
         this.SendCommand(this.getCommandID("create_rooms_grid"), params);
     }
-}
-
-void CreateRoomsGrid(CRules@ this, Vec2f[] override_rooms_coords = Vec2f[]())
-{
-    // create both on client and server
-    CMap@ map = getMap();
-    if (map is null) return;
-
-    Vec2f[] rooms_coords;
-    if (override_rooms_coords.length() > 0)
-    {
-        rooms_coords = override_rooms_coords;
-    }
-    else
-    {
-        int map_width = map.tilemapwidth;
-        int map_height = map.tilemapheight;
-
-        for (int x = 0; x < map_width; x += ROOM_SIZE.x)
-        {
-            for (int y = 0; y < map_height; y += ROOM_SIZE.y)
-            {
-                rooms_coords.push_back(Vec2f(x * map.tilesize, y * map.tilesize));
-            }
-        }
-    }
-
-    print("Created rooms grid with " + rooms_coords.length + " rooms");
-    @local_rooms_coords = @rooms_coords;
-    this.set("rooms_coords", rooms_coords);
-}
-
-void SyncRoomsGrid(CRules@ this)
-{
-    // send a command to clients with actual rooms grid
-    if (!isServer()) return;
-
-    CMap@ map = getMap();
-    if (map is null) return;
-
-    Vec2f[]@ rooms_coords;
-    if (!this.get("rooms_coords", @rooms_coords)) return;
-
-    CBitStream params;
-    params.write_bool(false);
-    params.write_u16(rooms_coords.length);
-    for (uint i = 0; i < rooms_coords.length; i++)
-    {
-        params.write_Vec2f(rooms_coords[i]);
-    }
-
-    print("Syncing rooms grid with " + rooms_coords.length + " rooms to clients");
-    this.SendCommand(this.getCommandID("create_rooms_grid"), params);
 }
 
 void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
@@ -178,74 +117,35 @@ void onTick(CRules@ this)
     if (isClient() && isServer() && getControls().isKeyPressed(KEY_LSHIFT))
     {
         map.server_SetTile(getControls().getMouseWorldPos(), CMap::tile_castle);
-    }   
-
-    //CBlob@ b = getBlobByName("archer");
-    //if (b !is null && b.isKeyJustPressed(key_action1))
-    //{
-    //    CBitStream params;
-    //    params.write_u8(RoomType::knight);
-    //    params.write_u16(0); // room id
-    //    params.write_Vec2f(ROOM_SIZE); // room size
-    //    params.write_Vec2f(Vec2f(0, 0)); // start pos
-    //    params.write_bool(false); // lazy load
-    //   if (isClient()) this.SendCommand(this.getCommandID("set_room"), params);
-    //   if (isClient()) print("sent "+this.getCommandID("set_room"));
-    //}
+    }
 }
 
-string GetRoomFile(u8 room_type, uint room_id)
+void CreateRoomsGrid(CRules@ this, Vec2f[] override_rooms_coords = Vec2f[]())
 {
-    return "room"+room_id+"_"+getTypeName(room_type)+".png";
-}
-
-void EraseRoom(CRules@ this, Vec2f pos, Vec2f size)
-{
+    // create both on client and server
     CMap@ map = getMap();
     if (map is null) return;
 
-    // clear blobs first
-    CBlob@[] blobs;
-    map.getBlobsInBox(pos, pos + size, @blobs);
-    for (uint i = 0; i < blobs.length; i++)
+    Vec2f[] rooms_coords;
+    if (override_rooms_coords.length() > 0)
     {
-        CBlob@ b = blobs[i];
-        if (b !is null && !b.hasTag("player") && b.getName() != "tdm_spawn") // don't delete players
+        rooms_coords = override_rooms_coords;
+    }
+    else
+    {
+        int map_width = map.tilemapwidth;
+        int map_height = map.tilemapheight;
+
+        for (int x = 0; x < map_width; x += ROOM_SIZE.x)
         {
-            b.Untag("exploding");
-            b.Tag("dead");
-            b.server_Die();
+            for (int y = 0; y < map_height; y += ROOM_SIZE.y)
+            {
+                rooms_coords.push_back(Vec2f(x * map.tilesize, y * map.tilesize));
+            }
         }
     }
 
-    print("Erased room at " + pos + " with size " + size + ", cleared " + blobs.length + " blobs");
-}
-
-void CreateRoomFromFile(CRules@ this, string room_file, Vec2f pos)
-{
-    RoomPNGLoader@ loader = @RoomPNGLoader();
-    uint[] cache = loader.loadRoom(getMap(), room_file, pos, ROOM_SIZE); // todo: set these to remove the tiles on erase
-
-    CMap@ map = getMap();
-    if (map is null) return;
-    
-    // temp fix
-    map.server_SetTile(Vec2f_zero, CMap::tile_ground_back);
-    map.server_SetTile(Vec2f_zero, map.getTile(Vec2f(map.tilesize, 0)).type);
-    Vec2f bottom_left = Vec2f(map.tilemapwidth - 1, map.tilemapheight - 1) * map.tilesize;
-    map.server_SetTile(bottom_left, CMap::tile_ground_back);
-    map.server_SetTile(bottom_left, map.getTile(bottom_left - Vec2f(map.tilesize, 0)).type);
-}
-
-string getTypeName(u8 room_type)
-{
-    switch (room_type)
-    {
-        case RoomType::knight: return "k";
-        case RoomType::archer: return "a";
-        case RoomType::builder: return "b";
-        default: return "unknown";
-    }
-
-    return "unknown";
+    print("Created rooms grid with " + rooms_coords.length + " rooms");
+    @local_rooms_coords = @rooms_coords;
+    this.set("rooms_coords", rooms_coords);
 }

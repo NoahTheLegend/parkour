@@ -1,4 +1,5 @@
 #include "PseudoVideoPlayer.as";
+#include "RoomsCommon.as";
 
 void menuSwitchListener(int x, int y, int button, IGUIItem@ sender)
 {
@@ -259,7 +260,7 @@ void UpdateLevels(Rectangle@ slider, Vec2f grid)
     array<float> row_heights(int(grid.y), 0.0f);
 
     const f32 offsetx = 40.0f;
-    const f32 offsety = 125.0f;
+    const f32 offsety = 140.0f;
 
     // calculate max width/height per column/row
     for (uint i = 0; i < showing_count; i++)
@@ -328,13 +329,69 @@ void UpdateLevels(Rectangle@ slider, Vec2f grid)
 
         Button@ text_pane = cast<Button@>(child.getChild("text_pane"));
         if (text_pane !is null)
-            text_pane.setPosition(Vec2f((child.size.x - text_pane.size.x) / 2, new_size.y - text_pane.size.y * 2));
+        {
+            text_pane.setPosition(Vec2f((child.size.x - text_pane.size.x) / 2, new_size.y + text_pane.size.y * 2));
+        }
 
         if (debug_levels_bg)
         {
             int shade = Maths::Clamp(255 - i * 5, 0, 255);
             child.color = SColor(255, shade, shade, shade);
         }
+    }
+}
+
+void loadLevelClickListener(int x, int y, int button, IGUIItem@ sender)
+{
+    CRules@ rules = getRules();
+    if (rules is null) return;
+
+    if (sender is null) return;
+
+    Rectangle@ level = cast<Rectangle@>(sender);
+    if (level is null) return;
+
+    string name = level.name;
+    string[] spl = name.split("_");
+    if (spl.length < 2) return;
+
+    u8 type = getTypeFromName(spl[0]);
+    int room_id = parseInt(spl[1]);
+    if (room_id < 0) return;
+
+    CBitStream params;
+    params.write_u8(RoomType::knight);
+    params.write_u16(room_id); // room id
+    params.write_Vec2f(ROOM_SIZE); // room size
+    params.write_Vec2f(Vec2f(0, 0)); // start pos // todo: get from level data
+    params.write_bool(false); // lazy load
+
+    rules.SendCommand(rules.getCommandID("set_room"), params);
+    print("sent "+rules.getCommandID("set_room"));
+}
+
+void levelHoverListener(bool is_over, IGUIItem@ sender)
+{
+    if (sender is null) return;
+
+    Rectangle@ level = cast<Rectangle@>(sender);
+    if (level is null) return;
+
+    Icon@ icon = cast<Icon@>(level.getChild("icon"));
+    if (icon is null) return;
+
+    Button@ text_pane = cast<Button@>(level.getChild("text_pane"));
+    if (text_pane is null) return;
+
+    if (is_over)
+    {
+        icon.color.set(255, 215, 215, 215);
+        text_pane.rectColor = SColor(255, 215, 0, 0);
+    }
+    else
+    {
+        icon.color.set(255, 255, 255, 255);
+        text_pane.rectColor = SColor(255, 255, 0, 0);
     }
 }
 

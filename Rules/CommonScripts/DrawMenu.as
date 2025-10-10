@@ -84,7 +84,9 @@ void LoadLevels()
 			Vec2f img_size = Vec2f(img.getWidth(), img.getHeight());
 
 			Rectangle@ level = @Rectangle(Vec2f(0, 0), img_size, SColor(0, 225, 179, 126));
-			level.name = "" + i;
+			level.name = "k_" + i;
+			level.addClickListener(loadLevelClickListener);
+			level.addHoverStateListener(levelHoverListener);
 			slider.addChild(level);
 
 			Icon@ icon = @Icon(path, -img_size / 2, img_size, 0, 1.0f, false);
@@ -335,15 +337,14 @@ void InitializeGUI(CRules@ this)
 
 	Label@ levelsTitle = @Label(title.localPosition, title.size, "", SColor(255, 0, 0, 0), true, title.font);
 	levelsTitle.name = "title";
-	levelsTitle.setText(levelsTitle.textWrap("Select a level (A/D)", title.font));
+	levelsTitle.setText(levelsTitle.textWrap("", title.font)); // not used, hidden under the tab buttons
 	levelsFrame.addChild(levelsTitle);
 
 	// LEVELS
-
 	Vec2f levelsButtonSize = Vec2f(menuSize.x / 3 - 30, 30);
-	Vec2f starting_pos = Vec2f((menuSize.x - levelsButtonSize.x * 3) / 2, 80);
+	Vec2f starting_pos = Vec2f((menuSize.x - levelsButtonSize.x * 3) / 2, -10);
 
-	Vec2f knightButtonPos = Vec2f(starting_pos.x, 0);
+	Vec2f knightButtonPos = Vec2f(starting_pos.x, starting_pos.y);
 	Vec2f archerButtonPos = knightButtonPos + Vec2f(levelsButtonSize.x, 0);
 	Vec2f builderButtonPos = archerButtonPos + Vec2f(levelsButtonSize.x, 0);
 
@@ -656,7 +657,7 @@ void updateOptionSliderValues()
     */
 }
 
-void onCommand( CRules@ this, u8 cmd, CBitStream @params )
+void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
 {
 	
 }
