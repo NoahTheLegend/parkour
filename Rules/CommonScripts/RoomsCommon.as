@@ -38,8 +38,9 @@ string GetRoomFile(u8 room_type, uint room_id)
     return "Rooms/" + getTypeName(room_type) + "_" + room_id + ".png";
 }
 
-void EraseRoom(CRules@ this, Vec2f pos, Vec2f size)
+void EraseRoom(CRules@ this, Vec2f pos, Vec2f size, u8 room_id)
 {
+    FixMesh();
     CMap@ map = getMap();
     if (map is null) return;
 
@@ -67,16 +68,26 @@ void EraseRoom(CRules@ this, Vec2f pos, Vec2f size)
             map.server_SetTile(Vec2f(x, y), CMap::tile_empty);
         }
     }
+
+    FixMesh();
 }
 
-void CreateRoomFromFile(CRules@ this, string room_file, Vec2f pos)
+void CreateRoomFromFile(CRules@ this, string room_file, Vec2f pos, u16 pid)
 {
-    RoomPNGLoader@ loader = @RoomPNGLoader();
+    RoomPNGLoader@ loader = @RoomPNGLoader(pid);
     uint[] cache = loader.loadRoom(getMap(), room_file, pos, ROOM_SIZE); // todo: set these to remove the tiles on erase
 
     CMap@ map = getMap();
     if (map is null) return;
     
+    FixMesh();
+}
+
+void FixMesh()
+{
+    CMap@ map = getMap();
+    if (map is null) return;
+
     // temp fix
     map.server_SetTile(Vec2f_zero, CMap::tile_ground_back);
     map.server_SetTile(Vec2f_zero, map.getTile(Vec2f(map.tilesize, 0)).type);

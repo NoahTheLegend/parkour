@@ -206,15 +206,40 @@ void RunStateMachine(CBlob@ this, KnightInfo@ knight, RunnerMoveVars@ moveVars)
 
 void onTick(CBlob@ this)
 {
-	if (this.isKeyJustPressed(key_action3))
+	// todo setting to use instant tp
+	if (this.isMyPlayer())
 	{
-		this.setVelocity(Vec2f_zero);
-		this.setPosition(this.getAimPos());
+		CControls@ controls = this.getControls();
+		if (controls is null) return;
+
+		CRules@ rules = getRules();
+		if (rules is null) return;
+
+		bool instant_teleport = rules.get_bool("instant_teleport");
+		u8 key_build_modifier_timer = this.get_u8("key_build_modifier_timer");
+		u8 time = 10;
+
+		bool pressed_key_mark = controls.ActionKeyPressed(AK_PARTY);
+		bool pressed_key_build_modifier = controls.ActionKeyPressed(AK_BUILD_MODIFIER);
+		bool just_pressed_key_build_modifier = pressed_key_build_modifier && key_build_modifier_timer == 0;
+		bool just_released_key_build_modifier = !pressed_key_build_modifier && key_build_modifier_timer > 0;
+
+		if (!pressed_key_build_modifier || pressed_key_mark) this.set_u8("key_build_modifier_timer", 0);
+		else this.set_u8("key_build_modifier_timer", Maths::Clamp(key_build_modifier_timer + 1, 0, time));
+
+		if (((instant_teleport ? just_pressed_key_build_modifier : just_released_key_build_modifier) || (pressed_key_build_modifier && key_build_modifier_timer == time)) && !pressed_key_mark)
+		{
+			this.setVelocity(Vec2f_zero);
+			this.setPosition(controls.getMouseWorldPos());
+			this.AddForce(Vec2f_zero); // update shape
+		}
 	}
+
 	if (this.getTeamNum() == 1) 
 	{
 		this.server_setTeamNum(0);
 	}
+
 	bool knocked = isKnocked(this);
 	CHUD@ hud = getHUD();
 

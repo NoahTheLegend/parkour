@@ -45,6 +45,9 @@ void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
     }
     else if (cmd == this.getCommandID("set_room"))
     {
+        u16 pid;
+        if (!params.saferead_u16(pid)) {print("Failed to read player id"); return;}
+
         u8 room_type;
         if (!params.saferead_u8(room_type)) {print("Failed to read room type"); return;}
 
@@ -63,10 +66,8 @@ void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
         print("Loaded room " + room_id + " of type " + room_type + " with size " + room_size + " at pos " + start_pos + (lazy_load ? " (lazy)" : ""));
 
         // erase area first
-        EraseRoom(this, start_pos, room_size);
-
-        // create room from tiles
-        CreateRoomFromFile(this, GetRoomFile(room_type, room_id), start_pos);
+        EraseRoom(this, start_pos, room_size, room_id); // tag for room creation
+        CreateRoomFromFile(this, GetRoomFile(room_type, room_id), start_pos, pid);
     }
 }
 
@@ -114,10 +115,10 @@ void onTick(CRules@ this)
     if (map is null) return;
 
     // debug
-    if (isClient() && isServer() && getControls().isKeyPressed(KEY_LSHIFT))
-    {
-        map.server_SetTile(getControls().getMouseWorldPos(), CMap::tile_castle);
-    }
+    // if (isClient() && isServer() && getControls().isKeyPressed(KEY_LSHIFT))
+    // {
+    //     map.server_SetTile(getControls().getMouseWorldPos(), CMap::tile_castle);
+    // }
 }
 
 void CreateRoomsGrid(CRules@ this, Vec2f[] override_rooms_coords = Vec2f[]())

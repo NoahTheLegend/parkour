@@ -281,7 +281,7 @@ void InitializeGUI(CRules@ this)
 
 	Label@ subtitle = @Label(Vec2f(8, 26), Vec2f(frameSize.x - 12, 16), "", SColor(255, 0, 0, 0), false, "Terminus_14");
 	subtitle.name = "subtitle";
-	subtitle.setText(subtitle.textWrap("* Load a level into your room to start.\n\n* Write !create to make a room, it is located inside the white square.\n\n* You can create and load own levels! Write !editor, !save [name], or !load [name]. ((todo: path))\n\n* Navigate through the menu for more info.", "Terminus_14"));
+	subtitle.setText(subtitle.textWrap("CONTROLS: [Build Modifier] - Teleport   [Eat] - Teleport to Anchor   [Build Modifier] + [Eat] - Replace Anchor\n\n* Load a level into your room to start.\n\n* Write !create to make a room, it is located inside the white square.\n\n* You can create and load own levels! Write !editor, !save [name], or !load [name]. ((todo: path))\n\n* Navigate through the menu for more info.", "Terminus_14"));
 	mainFrame.addChild(subtitle);
 
 	// switchers
@@ -299,7 +299,7 @@ void InitializeGUI(CRules@ this)
 	infoButton.addClickListener(pageClickListener);
 	infoButton.name = "infoButton";
 	infoButton.setLevel(ContainerLevel::PAGE_FRAME);
-	infoButton.rectColor = SColor(255, 200, 55, 185);
+	infoButton.rectColor = SColor(255, 225, 55, 255);
 	menuWindow.addChild(infoButton);
 
 	@infoFrame = @Rectangle(mainFrame.localPosition, mainFrame.size, mainFrame.color);
@@ -322,8 +322,47 @@ void InitializeGUI(CRules@ this)
 	Vec2f scrollerRightPos = Vec2f(mainFrame.size.x - 35, 25);
 	Vec2f scrollerRightSize = Vec2f(25, mainFrame.size.y - 40);
 
+	// help frame
+	Button@ helpButton = @Button(Vec2f(menuSize.x - 400, 0), Vec2f(100, 30), "Help", SColor(255, 255, 255, 255), "Sakana_16");
+	helpButton.addClickListener(pageClickListener);
+	helpButton.name = "helpButton";
+	helpButton.setLevel(ContainerLevel::PAGE_FRAME);
+	helpButton.rectColor = SColor(255, 245, 25, 185);
+	menuWindow.addChild(helpButton);
+
+	@helpFrame = @Rectangle(mainFrame.localPosition, mainFrame.size, mainFrame.color);
+	helpFrame.name = "helpFrame";
+	helpFrame.isEnabled = false;
+	menuWindow.addChild(helpFrame);
+
+	Label@ helpTitle = @Label(title.localPosition, title.size, "", SColor(255, 0, 0, 0), true, title.font);
+	helpTitle.name = "title";
+	helpTitle.setText(helpTitle.textWrap("Hover on the videos to watch them (A/D) [01]", title.font));
+	helpFrame.addChild(helpTitle);
+
+	// slider and scrollers
+	Rectangle@ helpFrameContentSlider = @Rectangle(mainFrame.localPosition + Vec2f(10, 32), mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
+	helpFrameContentSlider.name = "slider";
+	helpFrameContentSlider._customData = -1; // sign for init
+	helpFrame.addChild(helpFrameContentSlider);
+
+	Button@ helpFrameScrollerLeft = @Button(scrollerLeftPos, scrollerLeftSize, "<", SColor(255, 255, 255, 255), "Terminus_18");
+	helpFrameScrollerLeft.name = "helpFrameScrollerLeft";
+	helpFrameScrollerLeft.rectColor = SColor(255, 245, 25, 185);
+	
+	helpFrameScrollerLeft._customData = -1;
+	helpFrame.addChild(helpFrameScrollerLeft);
+	helpFrameScrollerLeft.addClickListener(scrollerClickListener);
+
+	Button@ helpFrameScrollerRight = @Button(scrollerRightPos, scrollerRightSize, ">", SColor(255, 255, 255, 255), "Terminus_18");
+	helpFrameScrollerRight.name = "helpFrameScrollerRight";
+	helpFrameScrollerRight.rectColor = SColor(255, 245, 25, 185);
+	helpFrameScrollerRight.addClickListener(scrollerClickListener);
+	helpFrameScrollerRight._customData = 1;
+	helpFrame.addChild(helpFrameScrollerRight);
+
 	// levels frame
-	Button@ levelsButton = @Button(Vec2f(menuSize.x - 400, 0), Vec2f(100, 30), "Levels", SColor(255, 255, 255, 255), "Sakana_16");
+	Button@ levelsButton = @Button(Vec2f(menuSize.x - 300, 0), Vec2f(100, 30), "Levels", SColor(255, 255, 255, 255), "Sakana_16");
 	levelsButton.addClickListener(pageClickListener);
 	levelsButton.name = "levelsButton";
 	levelsButton.setLevel(ContainerLevel::PAGE_FRAME);
@@ -447,51 +486,12 @@ void InitializeGUI(CRules@ this)
 	builderLevelsFrameScrollerRight._customData = 1;
 	builderLevelsFrame.addChild(builderLevelsFrameScrollerRight);
 
-	// help frame
-	Button@ helpButton = @Button(Vec2f(menuSize.x - 300, 0), Vec2f(100, 30), "Help", SColor(255, 255, 255, 255), "Sakana_16");
-	helpButton.addClickListener(pageClickListener);
-	helpButton.name = "helpButton";
-	helpButton.setLevel(ContainerLevel::PAGE_FRAME);
-	helpButton.rectColor = SColor(255, 65, 185, 85);
-	menuWindow.addChild(helpButton);
-
-	@helpFrame = @Rectangle(mainFrame.localPosition, mainFrame.size, mainFrame.color);
-	helpFrame.name = "helpFrame";
-	helpFrame.isEnabled = false;
-	menuWindow.addChild(helpFrame);
-
-	Label@ helpTitle = @Label(title.localPosition, title.size, "", SColor(255, 0, 0, 0), true, title.font);
-	helpTitle.name = "title";
-	helpTitle.setText(helpTitle.textWrap("Hover on the videos to watch them (A/D) [01]", title.font));
-	helpFrame.addChild(helpTitle);
-
-	// slider and scrollers
-	Rectangle@ helpFrameContentSlider = @Rectangle(mainFrame.localPosition + Vec2f(10, 32), mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
-	helpFrameContentSlider.name = "slider";
-	helpFrameContentSlider._customData = -1; // sign for init
-	helpFrame.addChild(helpFrameContentSlider);
-
-	Button@ helpFrameScrollerLeft = @Button(scrollerLeftPos, scrollerLeftSize, "<", SColor(255, 255, 255, 255), "Terminus_18");
-	helpFrameScrollerLeft.name = "helpFrameScrollerLeft";
-	helpFrameScrollerLeft.rectColor = SColor(255, 65, 185, 85);
-	
-	helpFrameScrollerLeft._customData = -1;
-	helpFrame.addChild(helpFrameScrollerLeft);
-	helpFrameScrollerLeft.addClickListener(scrollerClickListener);
-
-	Button@ helpFrameScrollerRight = @Button(scrollerRightPos, scrollerRightSize, ">", SColor(255, 255, 255, 255), "Terminus_18");
-	helpFrameScrollerRight.name = "helpFrameScrollerRight";
-	helpFrameScrollerRight.rectColor = SColor(255, 65, 185, 85);
-	helpFrameScrollerRight.addClickListener(scrollerClickListener);
-	helpFrameScrollerRight._customData = 1;
-	helpFrame.addChild(helpFrameScrollerRight);
-
 	// settings frame
 	Button@ settingsButton = @Button(Vec2f(menuSize.x - 200, 0), Vec2f(100, 30), "Settings", SColor(255, 255, 255, 255), "Sakana_16");
 	settingsButton.addClickListener(pageClickListener);
 	settingsButton.name = "settingsButton";
 	settingsButton.setLevel(ContainerLevel::PAGE_FRAME);
-	settingsButton.rectColor = SColor(255, 55, 125, 185);
+	settingsButton.rectColor = SColor(255, 255, 115, 55);
 	menuWindow.addChild(settingsButton);
 
 	@settingsFrame = @Rectangle(mainFrame.localPosition, mainFrame.size, mainFrame.color);
@@ -528,7 +528,7 @@ void InitializeGUI(CRules@ this)
 
 	Label@ chessInfoSubtitle = @Label(subtitle.localPosition, subtitle.size, "", SColor(255, 0, 0, 0), false, subtitle.font);
 	chessInfoSubtitle.name = "subtitle";
-	chessInfoSubtitle.setText(chessInfoSubtitle.textWrap("\"Chess\" is a special level where players can hang out and play chess together. Please, note that players with high ping might encounter some minor control artifacts.\n\nWASD - Move, LMB - Select/Place, RMB - Deselect, END key - end a match.", subtitle.font));
+	chessInfoSubtitle.setText(chessInfoSubtitle.textWrap("\"Chess\" is a special level where players can hang out and play chess together. Please, note that players with high ping might encounter some minor control artifacts.\n\nWASD - Move, LMB - Select/Place, RMB - Deselect, END key - end the match.", subtitle.font));
 	chessInfoFrame.addChild(chessInfoSubtitle);
 
 	// switcher pointer
@@ -554,37 +554,48 @@ void AddSettings(CRules@ this, Rectangle@ settingsFrame)
 	f32 gap = 5;
 	f32 prevHeight = 0;
 
-	// path line toggle (off by default)
+	// path line toggle (all settings are on by default)
 	bool path_line = this.get_bool("path_line");
 	Button@ disablePathLineToggle = @Button(Vec2f(10, 0), buttonSize, "Disable path line: " + (path_line ? "ON" : "OFF"), SColor(255, 255, 255, 255));
 	disablePathLineToggle.name = "disablePathLineToggle";
 	disablePathLineToggle.selfLabeled = true;
-	disablePathLineToggle.rectColor = SColor(255, 55, 125, 185);
+	disablePathLineToggle.rectColor = SColor(255, 255, 115, 55);
 	disablePathLineToggle.toggled = path_line;
 	disablePathLineToggle.addClickListener(toggleListener);
 	settingsFrame.addChild(disablePathLineToggle);
 	prevHeight += buttonSize.y + gap;
 
-	// disable movement while menu is open (on by default)
+	// disable movement while menu is open
 	bool disable_movement = this.get_bool("disable_movement");
 	Button@ disableMovementToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Menu disables movement: " + (disable_movement ? "ON" : "OFF"), SColor(255, 255, 255, 255));
 	disableMovementToggle.name = "disableMovementToggle";
 	disableMovementToggle.selfLabeled = true;
-	disableMovementToggle.rectColor = SColor(255, 55, 125, 185);
+	disableMovementToggle.rectColor = SColor(255, 255, 115, 55);
 	disableMovementToggle.toggled = disable_movement;
 	disableMovementToggle.addClickListener(toggleListener);
 	settingsFrame.addChild(disableMovementToggle);
 	prevHeight += buttonSize.y + gap;
 
-	// can open menu while moving (off by default)
+	// can open menu while moving
 	bool allow_moving_menu = this.get_bool("allow_moving_menu");
 	Button@ allowMovingMenuToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Require stop for menu: " + (allow_moving_menu ? "ON" : "OFF"), SColor(255, 255, 255, 255));
 	allowMovingMenuToggle.name = "allowMovingMenuToggle";
 	allowMovingMenuToggle.selfLabeled = true;
-	allowMovingMenuToggle.rectColor = SColor(255, 55, 125, 185);
+	allowMovingMenuToggle.rectColor = SColor(255, 255, 115, 55);
 	allowMovingMenuToggle.toggled = allow_moving_menu;
 	allowMovingMenuToggle.addClickListener(toggleListener);
 	settingsFrame.addChild(allowMovingMenuToggle);
+	prevHeight += buttonSize.y + gap;
+
+	// instant teleport
+	bool instant_teleport = this.get_bool("instant_teleport");
+	Button@ instantTeleportToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Instant teleport: " + (instant_teleport ? "ON" : "OFF"), SColor(255, 255, 255, 255));
+	instantTeleportToggle.name = "instantTeleportToggle";
+	instantTeleportToggle.selfLabeled = true;
+	instantTeleportToggle.rectColor = SColor(255, 255, 115, 55);
+	instantTeleportToggle.toggled = instant_teleport;
+	instantTeleportToggle.addClickListener(toggleListener);
+	settingsFrame.addChild(instantTeleportToggle);
 	prevHeight += buttonSize.y + gap;
 }
 
@@ -614,6 +625,14 @@ void UpdateSettings(CRules@ this)
 		this.set_bool("allow_moving_menu", allow_moving_menu);
 		allowMovingMenuToggle.desc = "Require stop for menu: " + (allow_moving_menu ? "ON" : "OFF");
 	}
+
+	Button@ instantTeleportToggle = cast<Button@>(settingsFrame.getChild("instantTeleportToggle"));
+	if (instantTeleportToggle !is null)
+	{
+		bool instant_teleport = instantTeleportToggle.toggled;
+		this.set_bool("instant_teleport", instant_teleport);
+		instantTeleportToggle.desc = "Instant teleport: " + (instant_teleport ? "ON" : "OFF");
+	}
 }
 
 void setCachedStates(CRules@ this)
@@ -640,6 +659,14 @@ void setCachedStates(CRules@ this)
 		bool allow_moving_menu = allowMovingMenuToggle.getBool("allow_moving_menu", "parkour_settings");
 		this.set_bool("allow_moving_menu", allow_moving_menu);
 		allowMovingMenuToggle.toggled = allow_moving_menu;
+	}
+
+	Button@ instantTeleportToggle = cast<Button@>(settingsFrame.getChild("instantTeleportToggle"));
+	if (instantTeleportToggle !is null)
+	{
+		bool instant_teleport = instantTeleportToggle.getBool("instant_teleport", "parkour_settings");
+		this.set_bool("instant_teleport", instant_teleport);
+		instantTeleportToggle.toggled = instant_teleport;
 	}
 
 	UpdateSettings(this);

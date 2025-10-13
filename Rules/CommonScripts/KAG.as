@@ -15,6 +15,7 @@ void onInit(CRules@ this)
 	// compatibility. mods that include scripts from before build 4541 may
 	// additionally want to bring back scripts they share commands with.
 	getNet().legacy_cmd = false;
+	getMap().legacyTileEffects = false;
 
 	if (isServer())
 	{

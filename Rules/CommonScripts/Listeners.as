@@ -169,6 +169,11 @@ void toggleListener(int x, int y, int button, IGUIItem@ sender)
         btn.toggled = !btn.toggled;
         btn.saveBool("allow_moving_menu", btn.toggled, "parkour_settings");
     }
+    else if (name == "instantTeleportToggle")
+    {
+        btn.toggled = !btn.toggled;
+        btn.saveBool("instant_teleport", btn.toggled, "parkour_settings");
+    }
 
     CRules@ rules = getRules();
     if (rules is null) return;
@@ -343,6 +348,8 @@ void UpdateLevels(Rectangle@ slider, Vec2f grid)
 
 void loadLevelClickListener(int x, int y, int button, IGUIItem@ sender)
 {
+    if (getLocalPlayer() is null) return;
+
     CRules@ rules = getRules();
     if (rules is null) return;
 
@@ -360,6 +367,7 @@ void loadLevelClickListener(int x, int y, int button, IGUIItem@ sender)
     if (room_id < 0) return;
 
     CBitStream params;
+    params.write_u16(getLocalPlayer().getNetworkID()); // player id
     params.write_u8(RoomType::knight);
     params.write_u16(room_id); // room id
     params.write_Vec2f(ROOM_SIZE); // room size
