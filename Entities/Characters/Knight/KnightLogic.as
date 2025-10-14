@@ -258,15 +258,20 @@ void onTick(CBlob@ this)
 	}
 
 	CMap@ map = getMap();
+	bool can_slide = true;
+	bool can_glide = true;
+	bool can_attack = true;
+
 	Tile tile = map.getTile(this.getPosition());
 	if (map.isTileBackground(tile))
 	{
-		knight.state = 0;
-		knight.swordTimer = 0;
-		knight.slideTime = 0;
-		knight.doubleslash = false;
-		this.set_s32("currentKnightState", 0);
+		can_slide = false;
+		can_attack = false;
 	}
+
+	this.set_bool("can_slide", can_slide);
+	this.set_bool("can_glide", can_glide);
+	this.set_bool("can_attack", can_attack);
 
 	if (this.isInInventory())
 	{
@@ -295,7 +300,6 @@ void onTick(CBlob@ this)
 	bool pressed_a1 = this.isKeyPressed(key_action1);
 	bool pressed_a2 = this.isKeyPressed(key_action2);
 	bool walking = (this.isKeyPressed(key_left) || this.isKeyPressed(key_right));
-
 	const bool myplayer = this.isMyPlayer();
 
 	if (getNet().isClient() && !this.isInInventory() && myplayer)  //Knight charge cursor
@@ -319,7 +323,6 @@ void onTick(CBlob@ this)
 	else
 	{
 		RunStateMachine(this, knight, moveVars);
-
 	}
 
 	//throwing bombs
@@ -593,7 +596,14 @@ class ShieldGlideState : KnightState
 		{
 			Vec2f vec;
 			const int direction = this.getAimDirection(vec);
-			if (direction == -1 && !forcedrop && !getMap().isInWater(pos + Vec2f(0, 16)) && !moveVars.wallsliding)
+			
+			if (!this.get_bool("can_glide"))
+			{
+				knight.state = KnightStates::shielding;
+				ShieldMovement(moveVars);
+				return false;
+			}
+			else if (direction == -1 && !forcedrop && !getMap().isInWater(pos + Vec2f(0, 16)) && !moveVars.wallsliding)
 			{
 				// already in KnightStates::shieldgliding;
 			}
@@ -602,13 +612,6 @@ class ShieldGlideState : KnightState
 				knight.state = KnightStates::shielddropping;
 				return true;
 			}
-			else
-			{
-				knight.state = KnightStates::shielding;
-				ShieldMovement(moveVars);
-				return false;
-			}
-
 		}
 
 		ShieldMovement(moveVars);
@@ -669,10 +672,17 @@ class ShieldSlideState : KnightState
 		{
 			Vec2f vec;
 			const int direction = this.getAimDirection(vec);
+			
 			if (direction == -1 && !forcedrop && !getMap().isInWater(pos + Vec2f(0, 16)) && !moveVars.wallsliding)
 			{
 				knight.state = KnightStates::shieldgliding;
 				return true;
+			}
+			else if (!this.get_bool("can_slide"))
+			{
+				knight.state = KnightStates::shielding;
+				ShieldMovement(moveVars);
+				return false;
 			}
 			else if (forcedrop || direction == 1)
 			{
@@ -792,11 +802,10 @@ class SwordDrawnState : KnightState
 
 	bool TickState(CBlob@ this, KnightInfo@ knight, RunnerMoveVars@ moveVars)
 	{
-		if (moveVars.wallsliding)
+		if (moveVars.wallsliding || !this.get_bool("can_attack"))
 		{
 			knight.state = KnightStates::normal;
 			return false;
-
 		}
 
 		Vec2f pos = this.getPosition();

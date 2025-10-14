@@ -276,6 +276,7 @@ class RoomPNGLoader
 			// Parkour
             case map_colors::anchor:         autotile(offset); spawnBlob(map, player_id, "anchor",      offset); break;
 			case map_colors::exit:           autotile(offset); spawnBlob(map, player_id, "exit",        offset); break;
+			case map_colors::chess:  	     autotile(offset); spawnBlob(map, player_id, "chess",       offset); break;
 
 			// Workshops
 			case map_colors::knight_shop:     autotile(offset); spawnBlob(map, player_id, "knightshop",  offset); break;
@@ -637,6 +638,7 @@ CBlob@ spawnBlob(CMap@ map, u16 player_id, const string &in name, u8 team, Vec2f
 {
 	CBlob@ blob = server_CreateBlob(name, team, position);
 	blob.set_u16("owner_id", player_id);
+	blob.Tag("owner_tag_" + player_id);
 
 	blob.set_s32("_support", blob.getShape().getConsts().support);
 	blob.getShape().getConsts().support = 0;

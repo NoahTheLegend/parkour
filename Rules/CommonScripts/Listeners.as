@@ -136,12 +136,30 @@ void pageClickListener(int x, int y, int button, IGUIItem@ sender)
 
 void loadChessListener(int x, int y, int button, IGUIItem@ sender)
 {
+    if (getLocalPlayer() is null) return;
+
+    CRules@ rules = getRules();
+    if (rules is null) return;
+
     if (sender is null) return;
 
-    Button@ btn = cast<Button@>(sender);
-    if (btn is null) return;
+    Button@ level = cast<Button@>(sender);
+    if (level is null) return;
 
-    // todo
+    string name = "ChessLevel.png";
+    u8 type = RoomType::chess;
+    int room_id = 5012;
+
+    CBitStream params;
+    params.write_u16(getLocalPlayer().getNetworkID()); // player id
+    params.write_u8(type);
+    params.write_u16(room_id); // room id
+    params.write_Vec2f(ROOM_SIZE); // room size
+    params.write_Vec2f(Vec2f(0, 0)); // start pos // todo: get from level data
+    params.write_bool(false); // lazy load
+
+    rules.SendCommand(rules.getCommandID("set_room"), params);
+    print("sent "+rules.getCommandID("set_room"));
 }
 
 void toggleListener(int x, int y, int button, IGUIItem@ sender)
@@ -368,7 +386,7 @@ void loadLevelClickListener(int x, int y, int button, IGUIItem@ sender)
 
     CBitStream params;
     params.write_u16(getLocalPlayer().getNetworkID()); // player id
-    params.write_u8(RoomType::knight);
+    params.write_u8(type);
     params.write_u16(room_id); // room id
     params.write_Vec2f(ROOM_SIZE); // room size
     params.write_Vec2f(Vec2f(0, 0)); // start pos // todo: get from level data

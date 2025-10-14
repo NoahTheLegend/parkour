@@ -103,7 +103,6 @@ void onTick(CSprite@ this)
 
 	bool pressed_a1 = blob.isKeyPressed(key_action1);
 	bool pressed_a2 = blob.isKeyPressed(key_action2);
-
 	bool walking = (blob.isKeyPressed(key_left) || blob.isKeyPressed(key_right));
 
 	aimpos = blob.getAimPos();

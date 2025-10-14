@@ -56,6 +56,7 @@ namespace map_colors
         // MOD
         anchor                 = 0xFFff0c68,
         exit                   = 0xFF0cffa8,
+		chess 				   = 0xFF6f3200, 
 
 		// TILES
 		tile_ground            = 0xFF844715, // ARGB(255, 132,  71,  21);

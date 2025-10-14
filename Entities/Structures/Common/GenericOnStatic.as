@@ -2,7 +2,7 @@
 
 void onSetStatic(CBlob@ this, const bool isStatic)
 {
-	this.getShape().SetTileValue_Legacy(); // sorry
+	//this.getShape().SetTileValue_Legacy(); // sorry
 
 	// ladder should add lightsource
 

@@ -67,8 +67,47 @@ void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
 
         // erase area first
         EraseRoom(this, start_pos, room_size, room_id); // tag for room creation
-        CreateRoomFromFile(this, GetRoomFile(room_type, room_id), start_pos, pid);
+
+        string file = room_type == RoomType::chess ? "ChessLevel.png" : GetRoomFile(room_type, room_id);
+        CreateRoomFromFile(this, file, start_pos, pid);
+
+        // set client vars
+        CPlayer@ p = getPlayerByNetworkId(pid);
+        if (p !is null && p.isMyPlayer())
+        {
+            this.set_u8("current_room_type", room_type);
+            this.set_s32("current_room_id", room_id);
+
+            this.set_Vec2f("current_room_pos", start_pos);
+            this.set_Vec2f("current_room_size", room_size);
+            this.set_Vec2f("current_room_center", start_pos + room_size * 0.5f);
+            this.set_bool("current_room_lazy", lazy_load);
+
+            warn("Client: set current room to " + room_id + " of type " + room_type + " at pos " + start_pos);
+        }
+
+        onRoomCreated(this, room_type, room_id, pid);
     }
+}
+
+void onRoomCreated(CRules@ this, u8 room_type, uint room_id, u16 pid)
+{
+    CPlayer@ p = getPlayerByNetworkId(pid);
+    if (p is null) return;
+
+    CBlob@ player_blob = p.getBlob();
+    string new_blob_name = room_type == RoomType::builder ? "builder" : room_type == RoomType::archer ? "archer" : "knight";
+    
+    CBlob@[] bs;
+    getBlobsByTag("owner_tag_" + pid, @bs);
+
+    CBlob@ target = bs.length > 0 ? bs[0] : null;
+    Vec2f pos = target !is null ? target.getPosition() : player_blob !is null ? player_blob.getPosition() : Vec2f(0, 0);
+
+    if (player_blob !is null && player_blob.getName() == new_blob_name) return; // already correct class
+    CBlob@ new_blob = server_CreateBlob(new_blob_name, p.getTeamNum(), pos);
+    new_blob.server_SetPlayer(p);
+    player_blob.server_Die();
 }
 
 Vec2f[]@ local_rooms_coords;
@@ -113,6 +152,8 @@ void onTick(CRules@ this)
 {
     CMap@ map = getMap();
     if (map is null) return;
+
+    FixMesh();
 
     // debug
     // if (isClient() && isServer() && getControls().isKeyPressed(KEY_LSHIFT))

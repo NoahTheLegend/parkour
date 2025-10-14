@@ -6,7 +6,8 @@ namespace RoomType {
     enum RoomType {
         knight = 0,
         archer,
-        builder
+        builder,
+        chess
     };
 };
 
@@ -60,12 +61,29 @@ void EraseRoom(CRules@ this, Vec2f pos, Vec2f size, u8 room_id)
 
     print("Erased room at " + pos + " with size " + size + ", cleared " + blobs.length + " blobs");
 
-    // erase tiles
+    // erase tiles that can collapse first (support < 255)
     for (f32 x = pos.x; x < pos.x + size.x; x += map.tilesize)
     {
         for (f32 y = pos.y; y < pos.y + size.y; y += map.tilesize)
         {
-            map.server_SetTile(Vec2f(x, y), CMap::tile_empty);
+            Tile tile = map.getTile(Vec2f(x, y));
+            if (tile.support < 255)
+            {
+                map.server_SetTile(Vec2f(x, y), CMap::tile_empty);
+            }
+        }
+    }
+
+    // erase remaining tiles
+    for (f32 x = pos.x; x < pos.x + size.x; x += map.tilesize)
+    {
+        for (f32 y = pos.y; y < pos.y + size.y; y += map.tilesize)
+        {
+            Tile tile = map.getTile(Vec2f(x, y));
+            if (tile.type != CMap::tile_empty)
+            {
+                map.server_SetTile(Vec2f(x, y), CMap::tile_empty);
+            }
         }
     }
 

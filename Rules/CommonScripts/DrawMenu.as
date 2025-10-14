@@ -281,7 +281,7 @@ void InitializeGUI(CRules@ this)
 
 	Label@ subtitle = @Label(Vec2f(8, 26), Vec2f(frameSize.x - 12, 16), "", SColor(255, 0, 0, 0), false, "Terminus_14");
 	subtitle.name = "subtitle";
-	subtitle.setText(subtitle.textWrap("CONTROLS: [Build Modifier] - Teleport   [Eat] - Teleport to Anchor   [Build Modifier] + [Eat] - Replace Anchor\n\n* Load a level into your room to start.\n\n* Write !create to make a room, it is located inside the white square.\n\n* You can create and load own levels! Write !editor, !save [name], or !load [name]. ((todo: path))\n\n* Navigate through the menu for more info.", "Terminus_14"));
+	subtitle.setText(subtitle.textWrap("CONTROLS:\n[Build Modifier] - Teleport\n[Mark Player] - Teleport to Anchor\n[Build Modifier] + [Mark Player] - Replace Anchor\n\n* Load a level into your room to start.\n\n* Write !create to make a room, it is located inside the white square.\n\n* You can create and load own levels! Write !editor, !save [name], or !load [name]. ((todo: path))\n\n* Navigate through the menu for more info.", "Terminus_14"));
 	mainFrame.addChild(subtitle);
 
 	// switchers
@@ -314,7 +314,7 @@ void InitializeGUI(CRules@ this)
 
 	Label@ infoSubtitle = @Label(subtitle.localPosition, subtitle.size, "", SColor(255, 0, 0, 0), false, subtitle.font);
 	infoSubtitle.name = "subtitle";
-	infoSubtitle.setText(infoSubtitle.textWrap("* Each of the official levels is possible to complete.\n\nSome levels, though, require you to know theory and the moveset.\n\nEnable the path line in settings and watch particular videos in \"Help\" section if you are stuck.", subtitle.font));
+	infoSubtitle.setText(infoSubtitle.textWrap("* Each of the official levels is possible to complete.\n\nSome levels, though, require you to know theory and the moveset.\n\nEnable the path line in settings and watch particular videos in \"Help\" section if you are stuck.\n\n* Tiles and background tiles have different properties for classes, for example, a knight won't be able to slide or slash while inside the background.", subtitle.font));
 	infoFrame.addChild(infoSubtitle);
 
 	Vec2f scrollerLeftPos = Vec2f(10, 25);
@@ -515,10 +515,11 @@ void InitializeGUI(CRules@ this)
 	chessInfoFrame.isEnabled = false;
 	menuWindow.addChild(chessInfoFrame);
 
-	Button@ loadChessButton = @Button(Vec2f(chessInfoFrame.size.x / 2 - 50, chessInfoFrame.size.y - 40), Vec2f(75, 30), "Play", SColor(255, 255, 255, 255), "Sakana_14");
+	Vec2f play_size = Vec2f(100, 30);
+	Button@ loadChessButton = @Button(Vec2f(chessInfoFrame.size.x / 2 - play_size.x / 2, chessInfoFrame.size.y - 40), play_size, "Play", SColor(255, 255, 255, 255), "Sakana_14");
 	loadChessButton.addClickListener(loadChessListener);
 	loadChessButton.name = "loadChessButton";
-	loadChessButton.rectColor = SColor(255, 55, 125, 185);
+	loadChessButton.rectColor = SColor(255, 175, 85, 0);
 	chessInfoFrame.addChild(loadChessButton);
 
 	Label@ chessInfoTitle = @Label(title.localPosition, title.size, "", SColor(255, 0, 0, 0), true, title.font);

@@ -71,10 +71,11 @@ void onRender(CSprite@ this)
 	// draw class icon
 
 	GUI::SetFont("menu");
-	GUI::DrawIcon(iconsFilename, frame, Vec2f(16, 32), tl + Vec2f(8 + (slotsSize - 1) * 40, -16), 1.0f, player.getTeamNum());
-	GUI::DrawTextCentered("SPACEBAR - teleport", tl + Vec2f(-80 + (slotsSize - 1) * 40, -16), SColor(255, 255, 255, 255));
-
-	makeWebsiteLink(Vec2f(15, 15), "Guides ", "https://www.youtube.com/playlist?list=PLEBLbNnH0gxFViieG6VQmoM6KMY3Cr1YT");	
+	if (player !is null && player.getTeamNum() >= 0)
+	{
+		GUI::DrawIcon(iconsFilename, frame, Vec2f(16, 32), tl + Vec2f(8 + (slotsSize - 1) * 40, -16), 1.0f, player.getTeamNum());
+		makeWebsiteLink(Vec2f(15, 15), "Guides ", "https://www.youtube.com/playlist?list=PLEBLbNnH0gxFViieG6VQmoM6KMY3Cr1YT");
+	}
 
 	if (blob.isMyPlayer())
 	{
