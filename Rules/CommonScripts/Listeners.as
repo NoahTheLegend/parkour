@@ -148,14 +148,16 @@ void loadChessListener(int x, int y, int button, IGUIItem@ sender)
 
     string name = "ChessLevel.png";
     u8 type = RoomType::chess;
+
     int room_id = 5012;
+    Vec2f pos = Vec2f_zero;
 
     CBitStream params;
     params.write_u16(getLocalPlayer().getNetworkID()); // player id
     params.write_u8(type);
     params.write_u16(room_id); // room id
     params.write_Vec2f(ROOM_SIZE); // room size
-    params.write_Vec2f(Vec2f(0, 0)); // start pos // todo: get from level data
+    params.write_Vec2f(pos); // start pos // todo: get from level data
     params.write_bool(false); // lazy load
 
     rules.SendCommand(rules.getCommandID("set_room"), params);
@@ -383,17 +385,9 @@ void loadLevelClickListener(int x, int y, int button, IGUIItem@ sender)
     u8 type = getTypeFromName(spl[0]);
     int room_id = parseInt(spl[1]);
     if (room_id < 0) return;
-
-    CBitStream params;
-    params.write_u16(getLocalPlayer().getNetworkID()); // player id
-    params.write_u8(type);
-    params.write_u16(room_id); // room id
-    params.write_Vec2f(ROOM_SIZE); // room size
-    params.write_Vec2f(Vec2f(0, 0)); // start pos // todo: get from level data
-    params.write_bool(false); // lazy load
-
-    rules.SendCommand(rules.getCommandID("set_room"), params);
-    print("sent "+rules.getCommandID("set_room"));
+    print(""+room_id);
+    Vec2f pos = Vec2f_zero; // todo: get from level data
+    sendRoomCommand(rules, type, room_id, pos);
 }
 
 void levelHoverListener(bool is_over, IGUIItem@ sender)

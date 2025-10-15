@@ -51,8 +51,8 @@ void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
         u8 room_type;
         if (!params.saferead_u8(room_type)) {print("Failed to read room type"); return;}
 
-        uint room_id;
-        if (!params.saferead_u16(room_id)) {print("Failed to read room id"); return;}
+        int room_id;
+        if (!params.saferead_s32(room_id)) {print("Failed to read room id"); return;}
 
         Vec2f room_size;
         if (!params.saferead_Vec2f(room_size)) {print("Failed to read room size"); return;}
@@ -60,16 +60,7 @@ void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
         Vec2f start_pos;
         if (!params.saferead_Vec2f(start_pos)) {print("Failed to read start pos"); return;}
 
-        bool lazy_load;
-        if (!params.saferead_bool(lazy_load)) {print("Failed to read lazy load"); return;}
-
-        print("Loaded room " + room_id + " of type " + room_type + " with size " + room_size + " at pos " + start_pos + (lazy_load ? " (lazy)" : ""));
-
-        // erase area first
-        EraseRoom(this, start_pos, room_size, room_id); // tag for room creation
-
-        string file = room_type == RoomType::chess ? "ChessLevel.png" : GetRoomFile(room_type, room_id);
-        CreateRoomFromFile(this, file, start_pos, pid);
+        print("Loaded room " + room_id + " of type " + room_type + " with size " + room_size + " at pos " + start_pos);
 
         // set client vars
         CPlayer@ p = getPlayerByNetworkId(pid);
@@ -81,11 +72,20 @@ void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
             this.set_Vec2f("current_room_pos", start_pos);
             this.set_Vec2f("current_room_size", room_size);
             this.set_Vec2f("current_room_center", start_pos + room_size * 0.5f);
-            this.set_bool("current_room_lazy", lazy_load);
 
-            warn("Client: set current room to " + room_id + " of type " + room_type + " at pos " + start_pos);
+            error("Client: set current room to " + room_id + " of type " + room_type + " at pos " + start_pos);
+        }
+        
+        string file = room_type == RoomType::chess ? "ChessLevel.png" : GetRoomFile(room_type, room_id);
+        CFileImage fm(file);
+        if (!fm.isLoaded())
+        {
+            print("Room file " + file + " not found, loading empty room");
+            file = "Maps/Hub.png";
         }
 
+        EraseRoom(this, start_pos, room_size, room_id); // tag for room creation
+        CreateRoomFromFile(this, file, start_pos, pid);
         onRoomCreated(this, room_type, room_id, pid);
     }
 }
@@ -153,13 +153,39 @@ void onTick(CRules@ this)
     CMap@ map = getMap();
     if (map is null) return;
 
-    FixMesh();
-
     // debug
     // if (isClient() && isServer() && getControls().isKeyPressed(KEY_LSHIFT))
     // {
     //     map.server_SetTile(getControls().getMouseWorldPos(), CMap::tile_castle);
     // }
+
+    if (!isServer()) return;
+
+	CRules@ rules = getRules();
+	if (rules is null) return;
+
+    bool needs_meshfix = false;
+	for (u8 i = 0; i < getPlayersCount(); i++)
+	{
+		CPlayer@ p = getPlayer(i);
+		if (p is null) continue;
+
+		string username = p.getUsername();
+		RoomPNGLoader@ loader;
+		if (rules.get("room_loader_" + username, @loader))
+		{
+			if (loader !is null)
+			{
+				loader.loadRoom();
+                needs_meshfix = true;
+			}
+		}
+	}
+
+    if (needs_meshfix)
+    {
+        FixMesh();
+    }
 }
 
 void CreateRoomsGrid(CRules@ this, Vec2f[] override_rooms_coords = Vec2f[]())

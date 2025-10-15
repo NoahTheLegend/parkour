@@ -16,8 +16,7 @@ const int PICKUP_COOLDOWN = 15;
 const int fletch_num_arrows = 1;
 const int STAB_DELAY = 12;
 const int STAB_TIME = 20;
-// code for the following is a bit stupid, TODO: make it normal
-// x = WEAKSHOT_CHARGE
+
 const int WEAKSHOT_CHARGE = 11; // 12 (x+1) in reality
 const int MIDSHOT_CHARGE = 13; // 24 (x+13) in reality
 const int FULLSHOT_CHARGE = 25; // 36 (x+25) in reality
@@ -87,7 +86,7 @@ void ManageGrapple(CBlob@ this, ArcherInfo@ archer)
 	bool right_click = this.isKeyJustPressed(key_action2);
 	CMap@ map = getMap();
 	Tile tile = map.getTile(this.getPosition());
-	if (map.isTileBackground(tile) && tile.type != CMap::tile_wood_back // do not deactivate in wood
+	if (map.isTileBackground(tile) && !map.isTileGrass(tile.type) && tile.type != CMap::tile_wood_back // do not deactivate in wood
 		&& (tile.type == CMap::tile_castle_back ? !archer.grappling : true)) // do not deactivate in stone if already attached
 	{
 		right_click = false;

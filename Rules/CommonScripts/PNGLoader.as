@@ -17,7 +17,6 @@ enum WAROffset
 
 //global
 Random@ map_random = Random();
-
 class RoomPNGLoader
 {
 	RoomPNGLoader(u16 _player_id)
@@ -33,28 +32,39 @@ class RoomPNGLoader
 	int current_offset_count;
 	u16 player_id;
 
-    uint[] loadRoom(CMap@ _map, const string& in filename, Vec2f &in pos, Vec2f &in room_size)
-    {
-        @map = _map;
-        @map_random = Random();
+	bool lazy_loading = false;
+	uint tiles_per_tick = 0;
+	Vec2f lazy_pos;
+	Vec2f lazy_room_size;
+	string lazy_filename;
+	uint lazy_pixel_index = 0;
+	uint[] lazy_placed_tiles;
+	int lazy_top_margin = 0, lazy_bottom_margin = -1, lazy_left_margin = 0, lazy_right_margin = -1;
+	array<Vec2f> lazy_pixels_to_place;
 
-        //if (!getNet().isServer())
-        //{
-        //    return true;
-        //}
+	void startLoading(CMap@ _map, const string& in filename, Vec2f &in pos, Vec2f &in room_size,
+		bool &in lazy_load, uint &in _tiles_per_tick)
+	{
+		@map = _map;
+		@map_random = Random();
+		lazy_loading = lazy_load;
+		tiles_per_tick = _tiles_per_tick;
+		lazy_pos = pos;
+		lazy_room_size = room_size;
+		lazy_filename = filename;
+		lazy_pixel_index = 0;
+		lazy_placed_tiles.clear();
+		lazy_pixels_to_place.clear();
+		lazy_top_margin = room_size.y / 8;
+		lazy_bottom_margin = -1;
+		lazy_left_margin = room_size.x / 8;
+		lazy_right_margin = -1;
 
-        @image = CFileImage(filename);
-		uint[] placed_tiles;
+		@image = CFileImage(filename);
 
-        if (image.isLoaded())
-        {
-            print("Loading room: " + filename);
-
-			// First pass: find boundaries
-			int top_margin = room_size.y / 8, bottom_margin = -1;
-			int left_margin = room_size.x / 8, right_margin = -1;
-
-			// Scan all pixels to find the boundary area
+		if (image.isLoaded())
+		{
+			// First pass: find boundaries and collect pixels to place
 			while (image.nextPixel())
 			{
 				const SColor pixel = image.readPixel();
@@ -62,49 +72,150 @@ class RoomPNGLoader
 
 				if (pixel.color != map_colors::sky && pixel.color != 0x00000000)
 				{
-					if (pixel_pos.y < top_margin)  top_margin = pixel_pos.y;
-					if (pixel_pos.y > bottom_margin) bottom_margin = pixel_pos.y;
-					if (pixel_pos.x < left_margin) left_margin = pixel_pos.x;
-					if (pixel_pos.x > right_margin) right_margin = pixel_pos.x;
+					if (pixel_pos.y < lazy_top_margin)  lazy_top_margin = pixel_pos.y;
+					if (pixel_pos.y > lazy_bottom_margin) lazy_bottom_margin = pixel_pos.y;
+					if (pixel_pos.x < lazy_left_margin) lazy_left_margin = pixel_pos.x;
+					if (pixel_pos.x > lazy_right_margin) lazy_right_margin = pixel_pos.x;
+					lazy_pixels_to_place.push_back(pixel_pos);
 				}
 			}
 
-			// Second pass: process pixels and call handlePixel
-			image.ResetPixel(); // Reset to start
-			while (image.nextPixel())
+			image.ResetPixel();
+		}
+	}
+
+	uint[] loadRoom()
+	{
+		@map_random = Random();
+
+		if (!lazy_loading)
+		{
+			uint[] placed_tiles;
+			@image = CFileImage(lazy_filename);
+
+			if (image.isLoaded())
 			{
-				const SColor pixel = image.readPixel();
-				Vec2f pixel_pos = image.getPixelPosition();
+				int top_margin = lazy_room_size.y / 8, bottom_margin = -1;
+				int left_margin = lazy_room_size.x / 8, right_margin = -1;
 
-				if (pixel.color != map_colors::sky && pixel.color != 0x00000000)
+				while (image.nextPixel())
 				{
-					// Calculate the center offset so the room is centered in room_size
-					Vec2f room_center(room_size.x * 0.5f, room_size.y * 0.5f);
-					Vec2f bounds_center((left_margin + right_margin) * 0.5f * map.tilesize, (top_margin + bottom_margin) * 0.5f * map.tilesize);
-					Vec2f margin = room_center - bounds_center;
+					const SColor pixel = image.readPixel();
+					Vec2f pixel_pos = image.getPixelPosition();
 
-					handlePixel(pixel, pixel_pos * map.tilesize + margin);
-					placed_tiles.push_back(map.getTileOffset(pos + pixel_pos * map.tilesize));
+					if (pixel.color != map_colors::sky && pixel.color != 0x00000000)
+					{
+						if (pixel_pos.y < top_margin)  top_margin = pixel_pos.y;
+						if (pixel_pos.y > bottom_margin) bottom_margin = pixel_pos.y;
+						if (pixel_pos.x < left_margin) left_margin = pixel_pos.x;
+						if (pixel_pos.x > right_margin) right_margin = pixel_pos.x;
+					}
 				}
+
+				image.ResetPixel();
+				while (image.nextPixel())
+				{
+					const SColor pixel = image.readPixel();
+					Vec2f pixel_pos = image.getPixelPosition();
+
+					if (pixel.color != map_colors::sky && pixel.color != 0x00000000)
+					{
+						Vec2f room_center(lazy_room_size.x * 0.5f, lazy_room_size.y * 0.5f);
+						Vec2f bounds_center((left_margin + right_margin) * 0.5f * map.tilesize, (top_margin + bottom_margin) * 0.5f * map.tilesize);
+						Vec2f margin = room_center - bounds_center;
+
+						handlePixel(pixel, pixel_pos * map.tilesize + margin);
+						placed_tiles.push_back(map.getTileOffset(lazy_pos + pixel_pos * map.tilesize));
+					}
+				}
+
+				// late load
+				for (uint i = 0; i < offsets.length; ++i)
+				{
+					int[]@ offset_set = offsets[i];
+					current_offset_count = offset_set.length;
+
+					for (uint step = 0; step < current_offset_count; ++step)
+					{
+						handleOffset(i, offset_set[step], step, current_offset_count);
+					}
+				}
+
+				return placed_tiles;
 			}
 
-            // late load - after placing tiles
-            for (uint i = 0; i < offsets.length; ++i)
-            {
-                int[]@ offset_set = offsets[i];
-                current_offset_count = offset_set.length;
+			return uint[]();
+		}
+		else
+		{
+			// lazy loading: process up to tiles_per_tick pixels per call
+			if (lazy_pixels_to_place.length == 0 || image is null || !image.isLoaded())
+				return lazy_placed_tiles;
 
-                for (uint step = 0; step < current_offset_count; ++step)
-                {
-                    handleOffset(i, offset_set[step], step, current_offset_count);
-                }
-            }
+			Vec2f room_center(lazy_room_size.x * 0.5f, lazy_room_size.y * 0.5f);
+			Vec2f bounds_center((lazy_left_margin + lazy_right_margin) * 0.5f * map.tilesize, (lazy_top_margin + lazy_bottom_margin) * 0.5f * map.tilesize);
+			Vec2f margin = room_center - bounds_center;
 
-            return placed_tiles;
-        }
+			uint processed = 0;
+			// Reverse order: process from bottom-to-top
+			while (lazy_pixel_index < lazy_pixels_to_place.length && processed < tiles_per_tick)
+			{
+				// Calculate reversed index
+				uint reversed_index = lazy_pixels_to_place.length - 1 - lazy_pixel_index;
+				Vec2f pixel_pos = lazy_pixels_to_place[reversed_index];
+				image.setPixelPosition(pixel_pos);
+				const SColor pixel = image.readPixel();
 
-        return uint[]();
-    }
+				handlePixel(pixel, pixel_pos * map.tilesize + margin);
+				lazy_placed_tiles.push_back(map.getTileOffset(lazy_pos + pixel_pos * map.tilesize));
+
+				lazy_pixel_index++;
+				processed++;
+			}
+
+			// If finished, do late load
+			if (lazy_pixel_index >= lazy_pixels_to_place.length)
+			{
+				for (uint i = 0; i < offsets.length; ++i)
+				{
+					int[]@ offset_set = offsets[i];
+					current_offset_count = offset_set.length;
+
+					for (uint step = 0; step < current_offset_count; ++step)
+					{
+						handleOffset(i, offset_set[step], step, current_offset_count);
+					}
+				}
+
+				// Reset lazy state
+				lazy_loading = false;
+				onLoad();
+			}
+
+			return lazy_placed_tiles;
+		}
+	}
+
+	void onLoad()
+	{
+		CRules@ rules = getRules();
+		if (rules is null) return;
+
+		rules.set("room_loader_" + getPlayerByNetworkId(player_id).getUsername(), null);
+
+		// set blobs to active
+		CBlob@[] blobs;
+		map.getBlobsInBox(lazy_pos, lazy_pos + lazy_room_size, @blobs);
+
+		for (uint i = 0; i < blobs.length; i++)
+		{
+			CBlob@ b = blobs[i];
+			if (b.exists("room_loader_init"))
+			{
+				b.Tag("room_loader_done");
+			}
+		}
+	}
 
 	// Queue an offset to be autotiled
 	void autotile(int offset)
@@ -530,6 +641,7 @@ class RoomPNGLoader
 			blob.getShape().getConsts().support = 0;
 			blob.getShape().SetStatic(true);
 			blob.AddScript("ResetSupport.as");
+			blob.AddScript("WaitForRoomLoader.as");
 		}
 
 		return blob;
@@ -645,6 +757,9 @@ CBlob@ spawnBlob(CMap@ map, u16 player_id, const string &in name, u8 team, Vec2f
 	blob.getShape().SetStatic(fixed);
 	blob.AddScript("ResetSupport.as");
 
+	blob.set_Vec2f("spawn_position", position);
+	blob.AddScript("WaitForRoomLoader.as");
+
 	return blob;
 }
 
@@ -653,6 +768,9 @@ CBlob@ spawnBlob(CMap@ map, u16 player_id, const string &in name, u8 team, Vec2f
 	CBlob@ blob = server_CreateBlob(name, team, position);
 	blob.setAngleDegrees(angle);
 	blob.set_u16("owner_id", player_id);
+
+	blob.set_Vec2f("spawn_position", position);
+	blob.AddScript("WaitForRoomLoader.as");
 
 	return blob;
 }
@@ -667,6 +785,9 @@ CBlob@ spawnBlob(CMap@ map, u16 player_id, const string &in name, u8 team, Vec2f
 	blob.getShape().SetStatic(fixed);
 	blob.AddScript("ResetSupport.as");
 
+	blob.set_Vec2f("spawn_position", position);
+	blob.AddScript("WaitForRoomLoader.as");
+
 	return blob;
 }
 
@@ -674,6 +795,9 @@ CBlob@ spawnBlob(CMap@ map, u16 player_id, const string& in name, int offset, u8
 {
 	CBlob@ blob = spawnBlob(map, player_id, name, team, getSpawnPosition(map, offset) + posOffset, angle, attached_to_map);
 	blob.set_u16("owner_id", player_id);
+
+	blob.set_Vec2f("spawn_position", getSpawnPosition(map, offset));
+	blob.AddScript("WaitForRoomLoader.as");
 
 	return blob;
 }
@@ -685,6 +809,7 @@ CBlob@ spawnVehicle(CMap@ map, const string& in name, int offset, int team = -1)
 	{
 		blob.RemoveScript("DecayIfLeftAlone.as");
 	}
+
 	return blob;
 }
 

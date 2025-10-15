@@ -27,7 +27,19 @@ void onCollision(CBlob@ this, CBlob@ blob, bool solid)
 	if (!blob.hasTag("player")) return;
 
 	// teleport player into next room
-	if (this.getTickSinceCreated() < 30) return; // wait a bit after creation
+	if (this.getTickSinceCreated() < 1) return; // wait a bit after creation
+	if (isClient() && blob.isMyPlayer())
+	{
+		CRules@ rules = getRules();
+		if (rules is null) return;
+
+		u8 room_type = rules.get_u8("current_room_type");
+		s32 room_id = rules.get_s32("current_room_id");
+		Vec2f start_pos = rules.get_Vec2f("current_room_pos");
+		Vec2f room_size = rules.get_Vec2f("current_room_size");
+
+		sendRoomCommand(rules, room_type, room_id + 1, start_pos);
+	}
 }
 
 bool doesCollideWithBlob(CBlob@ this, CBlob@ blob)

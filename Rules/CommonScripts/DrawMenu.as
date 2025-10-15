@@ -281,7 +281,7 @@ void InitializeGUI(CRules@ this)
 
 	Label@ subtitle = @Label(Vec2f(8, 26), Vec2f(frameSize.x - 12, 16), "", SColor(255, 0, 0, 0), false, "Terminus_14");
 	subtitle.name = "subtitle";
-	subtitle.setText(subtitle.textWrap("CONTROLS:\n[Build Modifier] - Teleport\n[Mark Player] - Teleport to Anchor\n[Build Modifier] + [Mark Player] - Replace Anchor\n\n* Load a level into your room to start.\n\n* Write !create to make a room, it is located inside the white square.\n\n* You can create and load own levels! Write !editor, !save [name], or !load [name]. ((todo: path))\n\n* Navigate through the menu for more info.", "Terminus_14"));
+	subtitle.setText(subtitle.textWrap("CONTROLS:\n[Build Modifier] - Teleport\n[Mark Player] - Teleport to Anchor\n[Build Modifier] + [Mark Player] - Replace Anchor\n\n* Write !create to make a room, it is located inside the white square.\n\n* Load a level into your room to start.\n\n* (WIP) You can create and load own levels!\nWrite !editor, !save [name], or !load [name].\n\n* Navigate through the menu for more info.", "Terminus_14"));
 	mainFrame.addChild(subtitle);
 
 	// switchers
@@ -299,7 +299,7 @@ void InitializeGUI(CRules@ this)
 	infoButton.addClickListener(pageClickListener);
 	infoButton.name = "infoButton";
 	infoButton.setLevel(ContainerLevel::PAGE_FRAME);
-	infoButton.rectColor = SColor(255, 225, 55, 255);
+	infoButton.rectColor = SColor(255, 185, 55, 255);
 	menuWindow.addChild(infoButton);
 
 	@infoFrame = @Rectangle(mainFrame.localPosition, mainFrame.size, mainFrame.color);
@@ -314,7 +314,7 @@ void InitializeGUI(CRules@ this)
 
 	Label@ infoSubtitle = @Label(subtitle.localPosition, subtitle.size, "", SColor(255, 0, 0, 0), false, subtitle.font);
 	infoSubtitle.name = "subtitle";
-	infoSubtitle.setText(infoSubtitle.textWrap("* Each of the official levels is possible to complete.\n\nSome levels, though, require you to know theory and the moveset.\n\nEnable the path line in settings and watch particular videos in \"Help\" section if you are stuck.\n\n* Tiles and background tiles have different properties for classes, for example, a knight won't be able to slide or slash while inside the background.", subtitle.font));
+	infoSubtitle.setText(infoSubtitle.textWrap("* Each of the official levels is possible to complete.\n\nSome levels, though, require you to know theory and the moveset.\n\n* Watch particular videos in \"Help\" section if you are stuck.\n\n* Tiles and background tiles have different properties for classes, for example, a knight won't be able to slide or slash while inside the background.", subtitle.font));
 	infoFrame.addChild(infoSubtitle);
 
 	Vec2f scrollerLeftPos = Vec2f(10, 25);
@@ -557,7 +557,7 @@ void AddSettings(CRules@ this, Rectangle@ settingsFrame)
 
 	// path line toggle (all settings are on by default)
 	bool path_line = this.get_bool("path_line");
-	Button@ disablePathLineToggle = @Button(Vec2f(10, 0), buttonSize, "Disable path line: " + (path_line ? "ON" : "OFF"), SColor(255, 255, 255, 255));
+	Button@ disablePathLineToggle = @Button(Vec2f(10, 0), buttonSize, "Disable path line (WIP): " + (path_line ? "ON" : "OFF"), SColor(255, 255, 255, 255));
 	disablePathLineToggle.name = "disablePathLineToggle";
 	disablePathLineToggle.selfLabeled = true;
 	disablePathLineToggle.rectColor = SColor(255, 255, 115, 55);
@@ -608,7 +608,7 @@ void UpdateSettings(CRules@ this)
 	{
 		bool path_line = disablePathLineToggle.toggled;
 		this.set_bool("path_line", path_line);
-		disablePathLineToggle.desc = "Disable path line: " + (path_line ? "ON" : "OFF");
+		disablePathLineToggle.desc = "Disable path line (WIP): " + (path_line ? "ON" : "OFF");
 	}
 
 	Button@ disableMovementToggle = cast<Button@>(settingsFrame.getChild("disableMovementToggle"));

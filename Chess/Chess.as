@@ -2009,7 +2009,7 @@ void ResetBoard(CBlob@ this)
 
 bool canBePickedUp(CBlob@ this, CBlob@ byBlob)
 {
-	return !this.hasAttached();
+	return byBlob.getPlayer() !is null && byBlob.getPlayer().getNetworkID() == this.get_u16("owner_id");
 }
 
 bool canBePutInInventory(CBlob@ this, CBlob@ inventoryBlob)

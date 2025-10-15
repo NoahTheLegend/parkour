@@ -206,7 +206,6 @@ void RunStateMachine(CBlob@ this, KnightInfo@ knight, RunnerMoveVars@ moveVars)
 
 void onTick(CBlob@ this)
 {
-	// todo setting to use instant tp
 	if (this.isMyPlayer())
 	{
 		CControls@ controls = this.getControls();
@@ -263,7 +262,7 @@ void onTick(CBlob@ this)
 	bool can_attack = true;
 
 	Tile tile = map.getTile(this.getPosition());
-	if (map.isTileBackground(tile))
+	if (map.isTileBackground(tile) && !map.isTileGrass(tile.type))
 	{
 		can_slide = false;
 		can_attack = false;

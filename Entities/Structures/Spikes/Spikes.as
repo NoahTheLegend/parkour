@@ -83,6 +83,11 @@ void tileCheck(CBlob@ this, CMap@ map, Vec2f pos, f32 angle, facing_direction se
 
 void onTick(CBlob@ this)
 {
+	if (this.hasTag("room_loader_init") && !this.hasTag("room_loader_done"))
+	{
+		return;
+	}
+
 	CMap@ map = getMap();
 	Vec2f pos = this.getPosition();
 	const f32 tilesize = map.tilesize;
@@ -135,7 +140,7 @@ void onTick(CBlob@ this)
 		this.getShape().SetStatic(false);
 
 		facing = down;
-		state = falling;
+		//state = falling; // never falls
 	}
 
 	if (state == falling)

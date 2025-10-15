@@ -39,6 +39,24 @@ string GetRoomFile(u8 room_type, uint room_id)
     return "Rooms/" + getTypeName(room_type) + "_" + room_id + ".png";
 }
 
+const u16[] collapseable_tiles = {
+    CMap::tile_castle,
+    CMap::tile_castle_back,
+    CMap::tile_wood,
+    CMap::tile_wood_back,
+    CMap::tile_castle_moss,
+    CMap::tile_castle_back_moss
+};
+
+const u16[] support_tiles = {
+    CMap::tile_ground,
+    CMap::tile_ground_back,
+    CMap::tile_bedrock,
+    CMap::tile_stone,
+    CMap::tile_thickstone,
+    CMap::tile_gold
+};
+
 void EraseRoom(CRules@ this, Vec2f pos, Vec2f size, u8 room_id)
 {
     FixMesh();
@@ -61,15 +79,25 @@ void EraseRoom(CRules@ this, Vec2f pos, Vec2f size, u8 room_id)
 
     print("Erased room at " + pos + " with size " + size + ", cleared " + blobs.length + " blobs");
 
-    // erase tiles that can collapse first (support < 255)
-    for (f32 x = pos.x; x < pos.x + size.x; x += map.tilesize)
+    bool removed = true;
+    while (removed)
     {
-        for (f32 y = pos.y; y < pos.y + size.y; y += map.tilesize)
+        removed = false;
+        for (f32 x = pos.x; x < pos.x + size.x; x += map.tilesize)
         {
-            Tile tile = map.getTile(Vec2f(x, y));
-            if (tile.support < 255)
+            for (f32 y = pos.y; y < pos.y + size.y; y += map.tilesize)
             {
-                map.server_SetTile(Vec2f(x, y), CMap::tile_empty);
+                Vec2f tilePos(x, y);
+                Tile tile = map.getTile(tilePos);
+                for (uint i = 0; i < collapseable_tiles.length; i++)
+                {
+                    if (tile.type == collapseable_tiles[i] && hasSupport(tilePos))
+                    {
+                        map.server_SetTile(tilePos, CMap::tile_ground_back);
+                        removed = true;
+                        break;
+                    }
+                }
             }
         }
     }
@@ -90,10 +118,39 @@ void EraseRoom(CRules@ this, Vec2f pos, Vec2f size, u8 room_id)
     FixMesh();
 }
 
+bool hasSupport(Vec2f pos)
+{
+    CMap@ map = getMap();
+    if (map is null) return false;
+
+    Vec2f[] directions;
+    directions.push_back(Vec2f(-map.tilesize, 0));
+    directions.push_back(Vec2f(map.tilesize, 0));
+    directions.push_back(Vec2f(0, -map.tilesize));
+    directions.push_back(Vec2f(0, map.tilesize));
+
+    for (uint d = 0; d < directions.length; ++d)
+    {
+        Vec2f adj = pos + directions[d];
+        Tile adjTile = map.getTile(adj);
+
+        for (uint s = 0; s < support_tiles.length; ++s)
+        {
+            if (adjTile.type == support_tiles[s])
+                return true;
+        }
+    }
+
+    return false;
+}
+
 void CreateRoomFromFile(CRules@ this, string room_file, Vec2f pos, u16 pid)
 {
-    RoomPNGLoader@ loader = @RoomPNGLoader(pid);
-    uint[] cache = loader.loadRoom(getMap(), room_file, pos, ROOM_SIZE); // todo: set these to remove the tiles on erase
+    RoomPNGLoader loader = RoomPNGLoader(pid);
+    loader.startLoading(getMap(), room_file, pos, ROOM_SIZE, true, 15);
+    
+    CPlayer@ p = getPlayerByNetworkId(pid);
+    if (p !is null) this.set("room_loader_" + p.getUsername(), @loader);
 
     CMap@ map = getMap();
     if (map is null) return;
@@ -109,9 +166,23 @@ void FixMesh()
     // temp fix
     map.server_SetTile(Vec2f_zero, CMap::tile_ground_back);
     map.server_SetTile(Vec2f_zero, map.getTile(Vec2f(map.tilesize, 0)).type);
+
     Vec2f bottom_left = Vec2f(map.tilemapwidth - 1, map.tilemapheight - 1) * map.tilesize;
     map.server_SetTile(bottom_left, CMap::tile_ground_back);
     map.server_SetTile(bottom_left, map.getTile(bottom_left - Vec2f(map.tilesize, 0)).type);
+}
+
+void sendRoomCommand(CRules@ rules, u8 type, int room_id, Vec2f pos)
+{
+    CBitStream params;
+    params.write_u16(getLocalPlayer().getNetworkID()); // player id
+    params.write_u8(type);
+    params.write_s32(room_id); // room id
+    params.write_Vec2f(ROOM_SIZE); // room size
+    params.write_Vec2f(pos); // start pos // todo: get from level data
+
+    rules.SendCommand(rules.getCommandID("set_room"), params);
+    print("sent " + rules.getCommandID("set_room"));
 }
 
 string getTypeName(u8 room_type)

@@ -165,6 +165,25 @@ shared class TDMSpawns : RespawnSystem
 
 	Vec2f getSpawnLocation(PlayerInfo@ p_info)
 	{
+		// if there s an anchor with same pid
+		CBlob@[] anchors;
+		if (getBlobsByName("anchor", @anchors))
+		{
+			for (uint i = 0; i < anchors.length; i++)
+			{
+				CBlob@ anchor = anchors[i];
+
+				CPlayer@ player = getPlayerByUsername(p_info.username);
+				if (player is null) continue;
+
+				u16 player_id = player.getNetworkID();
+				if (anchor.get_u16("owner_id") == player_id)
+				{
+					return anchor.getPosition();
+				}
+			}
+		}
+
 		CBlob@[] spawns;
 		CBlob@[] teamspawns;
 
