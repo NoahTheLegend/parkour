@@ -86,6 +86,12 @@ class RoomPNGLoader
 
 	uint[] loadRoom()
 	{
+		uint[] empt;
+
+		CRules@ rules = getRules();
+		if (rules is null) return empt;
+		
+		if (rules.get_u32("_room_creation_delay") > getGameTime()) return empt;
 		@map_random = Random();
 
 		if (!lazy_loading)
@@ -144,7 +150,7 @@ class RoomPNGLoader
 				return placed_tiles;
 			}
 
-			return uint[]();
+			return empt;
 		}
 		else
 		{

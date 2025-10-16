@@ -2,6 +2,11 @@
 
 Vec2f ROOM_SIZE = Vec2f(100, 100) * 8;
 
+const u8 tiles_per_tick_base = 20;
+const u32 room_creation_delay_base = 0;
+
+TileType filler_tile = CMap::tile_ground_back;
+
 namespace RoomType {
     enum RoomType {
         knight = 0,
@@ -59,7 +64,6 @@ const u16[] support_tiles = {
 
 void EraseRoom(CRules@ this, Vec2f pos, Vec2f size, u8 room_id)
 {
-    FixMesh();
     CMap@ map = getMap();
     if (map is null) return;
 
@@ -114,8 +118,6 @@ void EraseRoom(CRules@ this, Vec2f pos, Vec2f size, u8 room_id)
             }
         }
     }
-
-    FixMesh();
 }
 
 bool hasSupport(Vec2f pos)
@@ -147,15 +149,38 @@ bool hasSupport(Vec2f pos)
 void CreateRoomFromFile(CRules@ this, string room_file, Vec2f pos, u16 pid)
 {
     RoomPNGLoader loader = RoomPNGLoader(pid);
-    loader.startLoading(getMap(), room_file, pos, ROOM_SIZE, true, 15);
+    loader.startLoading(getMap(), room_file, pos, ROOM_SIZE, true, tiles_per_tick_base);
+    this.set_u32("_room_creation_delay", getGameTime() + room_creation_delay_base);
     
     CPlayer@ p = getPlayerByNetworkId(pid);
     if (p !is null) this.set("room_loader_" + p.getUsername(), @loader);
+}
 
+void SetMesh()
+{
     CMap@ map = getMap();
     if (map is null) return;
-    
-    FixMesh();
+
+    // temp fix - make 2x2 areas
+    Vec2f top_left = Vec2f_zero;
+    for (int ix = 0; ix < 2; ix++)
+    {
+        for (int iy = 0; iy < 2; iy++)
+        {
+            Vec2f p = top_left + Vec2f(ix * map.tilesize, iy * map.tilesize);
+            map.server_SetTile(p, filler_tile);
+        }
+    }
+
+    Vec2f bottom_right = Vec2f(map.tilemapwidth - 2, map.tilemapheight - 2) * map.tilesize;
+    for (int ix = 0; ix < 2; ix++)
+    {
+        for (int iy = 0; iy < 2; iy++)
+        {
+            Vec2f p = bottom_right + Vec2f(ix * map.tilesize, iy * map.tilesize);
+            map.server_SetTile(p, filler_tile);
+        }
+    }
 }
 
 void FixMesh()
@@ -163,13 +188,34 @@ void FixMesh()
     CMap@ map = getMap();
     if (map is null) return;
 
-    // temp fix
-    map.server_SetTile(Vec2f_zero, CMap::tile_ground_back);
-    map.server_SetTile(Vec2f_zero, map.getTile(Vec2f(map.tilesize, 0)).type);
+    // break placed corners
+    Vec2f top_left = Vec2f_zero;
+    Vec2f bottom_base = Vec2f(map.tilemapwidth - 2, map.tilemapheight - 2) * map.tilesize;
 
-    Vec2f bottom_left = Vec2f(map.tilemapwidth - 1, map.tilemapheight - 1) * map.tilesize;
-    map.server_SetTile(bottom_left, CMap::tile_ground_back);
-    map.server_SetTile(bottom_left, map.getTile(bottom_left - Vec2f(map.tilesize, 0)).type);
+    Vec2f copy_top_left = Vec2f(3, 0) * map.tilesize;
+    Vec2f copy_bottom_right = Vec2f(map.tilemapwidth - 3, map.tilemapheight) * map.tilesize;
+
+    for (int ix = 0; ix < 2; ix++)
+    {
+        for (int iy = 0; iy < 2; iy++)
+        {
+            Vec2f src = copy_top_left + Vec2f(ix * map.tilesize, iy * map.tilesize);
+            Vec2f dst = top_left + Vec2f(ix * map.tilesize, iy * map.tilesize);
+            Tile t = map.getTile(src);
+            map.server_SetTile(dst, t.type);
+        }
+    }
+
+    for (int ix = 0; ix < 2; ix++)
+    {
+        for (int iy = 0; iy < 2; iy++)
+        {
+            Vec2f src = copy_bottom_right + Vec2f(ix * map.tilesize, iy * map.tilesize);
+            Vec2f dst = bottom_base + Vec2f(ix * map.tilesize, iy * map.tilesize);
+            Tile t = map.getTile(src);
+            map.server_SetTile(dst, t.type);
+        }
+    }
 }
 
 void sendRoomCommand(CRules@ rules, u8 type, int room_id, Vec2f pos)

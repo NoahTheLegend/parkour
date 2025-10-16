@@ -160,11 +160,12 @@ void onTick(CRules@ this)
     // }
 
     if (!isServer()) return;
+    if (this.hasTag("needs_meshfix"))
+    {
+        FixMesh();
+        this.Untag("needs_meshfix");
+    }
 
-	CRules@ rules = getRules();
-	if (rules is null) return;
-
-    bool needs_meshfix = false;
 	for (u8 i = 0; i < getPlayersCount(); i++)
 	{
 		CPlayer@ p = getPlayer(i);
@@ -172,20 +173,17 @@ void onTick(CRules@ this)
 
 		string username = p.getUsername();
 		RoomPNGLoader@ loader;
-		if (rules.get("room_loader_" + username, @loader))
+		if (this.get("room_loader_" + username, @loader))
 		{
 			if (loader !is null)
 			{
+                SetMesh();
 				loader.loadRoom();
-                needs_meshfix = true;
+				//this.Tag("needs_meshfix");
+                FixMesh();
 			}
 		}
 	}
-
-    if (needs_meshfix)
-    {
-        FixMesh();
-    }
 }
 
 void CreateRoomsGrid(CRules@ this, Vec2f[] override_rooms_coords = Vec2f[]())
