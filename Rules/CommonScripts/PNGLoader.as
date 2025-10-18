@@ -84,6 +84,60 @@ class RoomPNGLoader
 		}
 	}
 
+	array<Vec2f> build_rhombus_order(array<Vec2f>@ positions, CFileImage@ img, int leftm, int rightm, int topm, int bottomm)
+	{
+		array<Vec2f> ordered;
+		if (positions.size() == 0) return ordered;
+
+		// find anchor pixel position (pixel coords)
+		bool found_anchor = false;
+		Vec2f anchor((leftm + rightm) * 0.5f, (topm + bottomm) * 0.5f); // default center
+		for (uint i = 0; i < positions.size(); ++i)
+		{
+			Vec2f p = positions[i];
+			if (img !is null && img.isLoaded())
+			{
+				img.setPixelPosition(p);
+				SColor pc = img.readPixel();
+				if (pc.color == map_colors::anchor)
+				{
+					anchor = p;
+					found_anchor = true;
+					break;
+				}
+			}
+		}
+
+		int maxDist = 0;
+		for (uint i = 0; i < positions.size(); ++i)
+		{
+			int dx = int(Maths::Abs(positions[i].x - anchor.x));
+			int dy = int(Maths::Abs(positions[i].y - anchor.y));
+			int d = dx + dy;
+			if (d > maxDist) maxDist = d;
+		}
+
+		array<bool> used;
+		used.resize(positions.size());
+
+		for (int d = 0; d <= maxDist; ++d)
+		{
+			for (uint i = 0; i < positions.size(); ++i)
+			{
+				if (used[i]) continue;
+				int dx = int(Maths::Abs(positions[i].x - anchor.x));
+				int dy = int(Maths::Abs(positions[i].y - anchor.y));
+				if (dx + dy == d)
+				{
+					ordered.push_back(positions[i]);
+					used[i] = true;
+				}
+			}
+		}
+
+		return ordered;
+	}
+
 	uint[] loadRoom()
 	{
 		uint[] empt;
@@ -104,6 +158,7 @@ class RoomPNGLoader
 				int top_margin = lazy_room_size.y / 8, bottom_margin = -1;
 				int left_margin = lazy_room_size.x / 8, right_margin = -1;
 
+				// First pass: determine bounds
 				while (image.nextPixel())
 				{
 					const SColor pixel = image.readPixel();
@@ -118,7 +173,10 @@ class RoomPNGLoader
 					}
 				}
 
+				// Second pass: collect pixels & colors
 				image.ResetPixel();
+				array<Vec2f> pixels;
+				array<SColor> colors;
 				while (image.nextPixel())
 				{
 					const SColor pixel = image.readPixel();
@@ -126,13 +184,33 @@ class RoomPNGLoader
 
 					if (pixel.color != map_colors::sky && pixel.color != 0x00000000)
 					{
-						Vec2f room_center(lazy_room_size.x * 0.5f, lazy_room_size.y * 0.5f);
-						Vec2f bounds_center((left_margin + right_margin) * 0.5f * map.tilesize, (top_margin + bottom_margin) * 0.5f * map.tilesize);
-						Vec2f margin = room_center - bounds_center;
-
-						handlePixel(pixel, pixel_pos * map.tilesize + margin);
-						placed_tiles.push_back(map.getTileOffset(lazy_pos + pixel_pos * map.tilesize));
+						pixels.push_back(pixel_pos);
+						colors.push_back(pixel);
 					}
+				}
+
+				// Build rhombus order around anchor
+				array<Vec2f> ordered_pixels = build_rhombus_order(pixels, image, left_margin, right_margin, top_margin, bottom_margin);
+
+				// margin calculation in world coords
+				Vec2f room_center(lazy_room_size.x * 0.5f, lazy_room_size.y * 0.5f);
+				Vec2f bounds_center((left_margin + right_margin) * 0.5f * map.tilesize, (top_margin + bottom_margin) * 0.5f * map.tilesize);
+				Vec2f margin = room_center - bounds_center;
+
+				for (uint i = 0; i < ordered_pixels.size(); ++i)
+				{
+					Vec2f pos = ordered_pixels[i];
+
+					// find index in pixels
+					int idx = -1;
+					for (uint j = 0; j < pixels.size(); ++j)
+					{
+						if (pixels[j] == pos) { idx = int(j); break; }
+					}
+
+					SColor col = (idx != -1) ? colors[idx] : SColor();
+					handlePixel(col, pos * map.tilesize + margin);
+					placed_tiles.push_back(map.getTileOffset(lazy_pos + pos * map.tilesize));
 				}
 
 				// late load
@@ -158,21 +236,29 @@ class RoomPNGLoader
 			if (lazy_pixels_to_place.length == 0 || image is null || !image.isLoaded())
 				return lazy_placed_tiles;
 
+			// On first lazy tick, reorder lazy_pixels_to_place into rhombus order
+			if (lazy_pixel_index == 0)
+			{
+				array<Vec2f> ordered = build_rhombus_order(lazy_pixels_to_place, image, lazy_left_margin, lazy_right_margin, lazy_top_margin, lazy_bottom_margin);
+				lazy_pixels_to_place = ordered; // replace with ordered list
+			}
+
 			Vec2f room_center(lazy_room_size.x * 0.5f, lazy_room_size.y * 0.5f);
 			Vec2f bounds_center((lazy_left_margin + lazy_right_margin) * 0.5f * map.tilesize, (lazy_top_margin + lazy_bottom_margin) * 0.5f * map.tilesize);
 			Vec2f margin = room_center - bounds_center;
 
 			uint processed = 0;
-			// Reverse order: process from bottom-to-top
 			while (lazy_pixel_index < lazy_pixels_to_place.length && processed < tiles_per_tick)
 			{
-				// Calculate reversed index
-				uint reversed_index = lazy_pixels_to_place.length - 1 - lazy_pixel_index;
-				Vec2f pixel_pos = lazy_pixels_to_place[reversed_index];
+				Vec2f pixel_pos = lazy_pixels_to_place[lazy_pixel_index];
 				image.setPixelPosition(pixel_pos);
 				const SColor pixel = image.readPixel();
 
+				SetMesh();
+
 				handlePixel(pixel, pixel_pos * map.tilesize + margin);
+
+				FixMesh();
 				lazy_placed_tiles.push_back(map.getTileOffset(lazy_pos + pixel_pos * map.tilesize));
 
 				lazy_pixel_index++;

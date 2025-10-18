@@ -748,6 +748,7 @@ void onTick(CBlob@ this)
 			this.setVelocity(Vec2f_zero);
 			this.setPosition(controls.getMouseWorldPos());
 			this.AddForce(Vec2f_zero); // update shape
+			this.getShape().getVars().inwater = false;
 		}
 	}
 

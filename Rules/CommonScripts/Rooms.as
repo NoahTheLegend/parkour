@@ -160,12 +160,6 @@ void onTick(CRules@ this)
     // }
 
     if (!isServer()) return;
-    if (this.hasTag("needs_meshfix"))
-    {
-        FixMesh();
-        this.Untag("needs_meshfix");
-    }
-
 	for (u8 i = 0; i < getPlayersCount(); i++)
 	{
 		CPlayer@ p = getPlayer(i);
@@ -177,10 +171,7 @@ void onTick(CRules@ this)
 		{
 			if (loader !is null)
 			{
-                SetMesh();
 				loader.loadRoom();
-				//this.Tag("needs_meshfix");
-                FixMesh();
 			}
 		}
 	}

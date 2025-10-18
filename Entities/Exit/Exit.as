@@ -19,6 +19,25 @@ void onTick(CBlob@ this)
 		SetMostLikelyBackground(this);
 		this.getCurrentScript().tickFrequency = 0;
 	}
+
+	if (this.hasTag("ready") && this.get_u32("teleport_time") + base_exit_delay < getGameTime())
+	{
+		CBlob@ blob = getBlobByNetworkID(this.get_u16("teleported_blob_id"));
+		if (blob is null) return;
+
+		if (isClient() && blob.isMyPlayer())
+		{
+			CRules@ rules = getRules();
+			if (rules is null) return;
+
+			u8 room_type = rules.get_u8("current_room_type");
+			s32 room_id = rules.get_s32("current_room_id");
+			Vec2f start_pos = rules.get_Vec2f("current_room_pos");
+			Vec2f room_size = rules.get_Vec2f("current_room_size");
+
+			sendRoomCommand(rules, room_type, room_id + 1, start_pos);
+		}
+	}
 }
 
 void onCollision(CBlob@ this, CBlob@ blob, bool solid)
@@ -28,18 +47,10 @@ void onCollision(CBlob@ this, CBlob@ blob, bool solid)
 
 	// teleport player into next room
 	if (this.getTickSinceCreated() < 1) return; // wait a bit after creation
-	if (isClient() && blob.isMyPlayer())
-	{
-		CRules@ rules = getRules();
-		if (rules is null) return;
-
-		u8 room_type = rules.get_u8("current_room_type");
-		s32 room_id = rules.get_s32("current_room_id");
-		Vec2f start_pos = rules.get_Vec2f("current_room_pos");
-		Vec2f room_size = rules.get_Vec2f("current_room_size");
-
-		sendRoomCommand(rules, room_type, room_id + 1, start_pos);
-	}
+	this.Tag("ready");
+	this.set_u16("teleported_blob_id", blob.getNetworkID());
+	this.set_u32("teleport_time", getGameTime());
+	this.getCurrentScript().tickFrequency = 1;
 }
 
 bool doesCollideWithBlob(CBlob@ this, CBlob@ blob)

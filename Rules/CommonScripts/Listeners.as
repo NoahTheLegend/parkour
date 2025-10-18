@@ -436,7 +436,8 @@ void scrollerClickListener(int x, int y, int button, IGUIItem@ sender)
     Rectangle@ slider = cast<Rectangle@>(parent.getChild("slider"));
     if (slider is null) return;
 
-    slider._customData += data;
+    int slider_data = slider._customData;
+    slider.setCustomData(slider_data + data);
     if (parent.name == "helpFrame")
     {
         Vec2f grid = default_grid;

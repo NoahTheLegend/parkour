@@ -93,6 +93,7 @@ interface IGUIItem{
 	void removeChild(IGUIItem@ child);
 	void clearChildren();
 	Vec2f getAbsolutePosition();
+	void setCustomData(int data);
 
 	//Saving GUI Props to CFG:
 	//By default only local position and size are (de)serialized. Override those to (de)serialize custom things.
@@ -321,6 +322,10 @@ class GenericGUIItem : IGUIItem{
 			absolutePosition += parent.getAbsolutePosition();
 		}
 		return absolutePosition;
+	}
+
+	void setCustomData(int data){
+		_customData = data;
 	}
 
 	/* Listener controls */

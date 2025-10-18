@@ -2,8 +2,9 @@
 
 Vec2f ROOM_SIZE = Vec2f(100, 100) * 8;
 
-const u8 tiles_per_tick_base = 20;
+const u8 tiles_per_tick_base = 15;
 const u32 room_creation_delay_base = 0;
+const u32 base_exit_delay = 5;
 
 TileType filler_tile = CMap::tile_ground_back;
 
@@ -172,12 +173,12 @@ void SetMesh()
         }
     }
 
-    Vec2f bottom_right = Vec2f(map.tilemapwidth - 2, map.tilemapheight - 2) * map.tilesize;
+    Vec2f bottom_left = Vec2f(0, map.tilemapheight - 2) * map.tilesize;
     for (int ix = 0; ix < 2; ix++)
     {
         for (int iy = 0; iy < 2; iy++)
         {
-            Vec2f p = bottom_right + Vec2f(ix * map.tilesize, iy * map.tilesize);
+            Vec2f p = bottom_left + Vec2f(ix * map.tilesize, iy * map.tilesize);
             map.server_SetTile(p, filler_tile);
         }
     }
@@ -190,10 +191,10 @@ void FixMesh()
 
     // break placed corners
     Vec2f top_left = Vec2f_zero;
-    Vec2f bottom_base = Vec2f(map.tilemapwidth - 2, map.tilemapheight - 2) * map.tilesize;
+    Vec2f bottom_left = Vec2f(0, map.tilemapheight - 2) * map.tilesize;
 
     Vec2f copy_top_left = Vec2f(3, 0) * map.tilesize;
-    Vec2f copy_bottom_right = Vec2f(map.tilemapwidth - 3, map.tilemapheight) * map.tilesize;
+    Vec2f copy_bottom_left = Vec2f(3, map.tilemapheight - 2) * map.tilesize;
 
     for (int ix = 0; ix < 2; ix++)
     {
@@ -210,8 +211,48 @@ void FixMesh()
     {
         for (int iy = 0; iy < 2; iy++)
         {
-            Vec2f src = copy_bottom_right + Vec2f(ix * map.tilesize, iy * map.tilesize);
-            Vec2f dst = bottom_base + Vec2f(ix * map.tilesize, iy * map.tilesize);
+            Vec2f src = copy_bottom_left + Vec2f(ix * map.tilesize, iy * map.tilesize);
+            Vec2f dst = bottom_left + Vec2f(ix * map.tilesize, iy * map.tilesize);
+            Tile t = map.getTile(src);
+            map.server_SetTile(dst, t.type);
+        }
+    }
+
+    for (int ix = 0; ix < 2; ix++)
+    {
+        for (int iy = 1; iy < 2; iy++)
+        {
+            Vec2f p = top_left + Vec2f(ix * map.tilesize, iy * map.tilesize);
+            map.server_SetTile(p, filler_tile);
+        }
+    }
+
+    for (int ix = 0; ix < 2; ix++)
+    {
+        for (int iy = 1; iy < 2; iy++)
+        {
+            Vec2f p = bottom_left + Vec2f(ix * map.tilesize, iy * map.tilesize);
+            map.server_SetTile(p, filler_tile);
+        }
+    }
+
+    for (int ix = 0; ix < 2; ix++)
+    {
+        for (int iy = 1; iy < 2; iy++)
+        {
+            Vec2f src = copy_top_left + Vec2f(ix * map.tilesize, iy * map.tilesize);
+            Vec2f dst = top_left + Vec2f(ix * map.tilesize, iy * map.tilesize);
+            Tile t = map.getTile(src);
+            map.server_SetTile(dst, t.type);
+        }
+    }
+
+    for (int ix = 0; ix < 2; ix++)
+    {
+        for (int iy = 1; iy < 2; iy++)
+        {
+            Vec2f src = copy_bottom_left + Vec2f(ix * map.tilesize, iy * map.tilesize);
+            Vec2f dst = bottom_left + Vec2f(ix * map.tilesize, iy * map.tilesize);
             Tile t = map.getTile(src);
             map.server_SetTile(dst, t.type);
         }
