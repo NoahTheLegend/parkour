@@ -43,6 +43,7 @@ Rectangle@ levelsFrame;
 Rectangle@ knightLevelsFrame;
 Rectangle@ archerLevelsFrame;
 Rectangle@ builderLevelsFrame;
+Rectangle@ customLevelsFrame;
 Rectangle@ helpFrame;
 Rectangle@ settingsFrame;
 Rectangle@ chessInfoFrame;
@@ -57,6 +58,7 @@ bool isGUINull()
 			|| @knightLevelsFrame == null
 			|| @archerLevelsFrame == null
 			|| @builderLevelsFrame == null
+			|| @customLevelsFrame == null
 			|| @helpFrame == null
 			|| @chessInfoFrame == null;
 }
@@ -99,7 +101,7 @@ void LoadLevels()
 			level.addChild(text_pane);
 
 			Vec2f pane_size = Vec2f(text_pane.size.x / 2 - 2, 8);
-			Label@ text = @Label(pane_size, pane_size, "" + i, SColor(255, 255, 255, 255), true, "Terminus_12");
+			Label@ text = @Label(pane_size + Vec2f(0, 1), pane_size, "" + i, SColor(255, 255, 255, 255), true, "Terminus_12");
 			text_pane.addChild(text);
 
 			level_count++;
@@ -263,6 +265,8 @@ void InitializeGUI(CRules@ this)
 
 	@menuWindow = @Window(menuPosHidden, menuSize, 0, "Menu");
 	menuWindow.name = "Menu";
+	menuWindow.isEnabled = true;
+	menuWindow.nodraw = false;
 	menuWindow.setLevel(ContainerLevel::WINDOW);
 
 	// default page frame
@@ -281,7 +285,7 @@ void InitializeGUI(CRules@ this)
 
 	Label@ subtitle = @Label(Vec2f(8, 26), Vec2f(frameSize.x - 12, 16), "", SColor(255, 0, 0, 0), false, "Terminus_14");
 	subtitle.name = "subtitle";
-	subtitle.setText(subtitle.textWrap("CONTROLS:\n[Build Modifier] - Teleport\n[Mark Player] - Teleport to Anchor\n[Build Modifier] + [Mark Player] - Replace Anchor\n\n* Write !create to make a room, it is located inside the white square.\n\n* Load a level into your room to start.\n\n* (WIP) You can create and load own levels!\nWrite !editor, !save [name], or !load [name].\n\n* Navigate through the menu for more info.", "Terminus_14"));
+	subtitle.setText(subtitle.textWrap("CONTROLS:\n[Build Modifier] - Teleport\n[Mark Player] - Teleport to Anchor\n[Build Modifier] + [Mark Player] - Replace Anchor\n\n* Write !create to make a room, it is located inside the white square.\n\n* Load a level into your room to start.\n\n* You can create and load own levels!\nWrite !editor, !save [name], or !load [name].\n\n* Navigate through the menu for more info.", "Terminus_14"));
 	mainFrame.addChild(subtitle);
 
 	// switchers
@@ -380,12 +384,14 @@ void InitializeGUI(CRules@ this)
 	levelsFrame.addChild(levelsTitle);
 
 	// LEVELS
-	Vec2f levelsButtonSize = Vec2f(menuSize.x / 3 - 30, 30);
-	Vec2f starting_pos = Vec2f((menuSize.x - levelsButtonSize.x * 3) / 2, -10);
+	u8 buttons_count = 4;
+	Vec2f levelsButtonSize = Vec2f(menuSize.x / buttons_count - 30, 30);
+	Vec2f starting_pos = Vec2f((menuSize.x - levelsButtonSize.x * buttons_count) / 2, -10);
 
 	Vec2f knightButtonPos = Vec2f(starting_pos.x, starting_pos.y);
 	Vec2f archerButtonPos = knightButtonPos + Vec2f(levelsButtonSize.x, 0);
 	Vec2f builderButtonPos = archerButtonPos + Vec2f(levelsButtonSize.x, 0);
+	Vec2f customButtonPos = builderButtonPos + Vec2f(levelsButtonSize.x, 0);
 
 	// KNIGHT
 	Button@ knightLevelsButton = @Button(knightButtonPos, levelsButtonSize, "Knight", SColor(255, 255, 255, 255), "Sakana_14");
@@ -486,6 +492,27 @@ void InitializeGUI(CRules@ this)
 	builderLevelsFrameScrollerRight._customData = 1;
 	builderLevelsFrame.addChild(builderLevelsFrameScrollerRight);
 
+	// CUSTOM LEVELS (and editor button)
+	Button@ customLevelsButton = @Button(customButtonPos, levelsButtonSize, "Custom", SColor(255, 255, 255, 255), "Sakana_14");
+	customLevelsButton.addClickListener(levelsClickListener);
+	customLevelsButton.name = "customLevelsButton";
+	customLevelsButton.rectColor = SColor(255, 155, 25, 55);
+	levelsFrame.addChild(customLevelsButton);
+
+	// custom levels frame
+	@customLevelsFrame = @Rectangle(Vec2f_zero, mainFrame.size, mainFrame.color);
+	customLevelsFrame.name = "customLevelsFrame";
+	customLevelsFrame.isEnabled = false;
+	levelsFrame.addChild(customLevelsFrame);
+
+	// editor button
+	Vec2f editor_size = Vec2f(150, 30);
+	Button@ openEditorButton = @Button(Vec2f(customLevelsFrame.size.x / 2 - editor_size.x / 2, customLevelsFrame.size.y - 40), editor_size, "Editor (WIP)", SColor(255, 255, 255, 255), "Sakana_14");
+	openEditorButton.addClickListener(openEditorListener);
+	openEditorButton.name = "openEditorButton";
+	openEditorButton.rectColor = SColor(255, 255, 25, 55);
+	customLevelsFrame.addChild(openEditorButton);
+	
 	// settings frame
 	Button@ settingsButton = @Button(Vec2f(menuSize.x - 200, 0), Vec2f(100, 30), "Settings", SColor(255, 255, 255, 255), "Sakana_16");
 	settingsButton.addClickListener(pageClickListener);
@@ -515,7 +542,7 @@ void InitializeGUI(CRules@ this)
 	chessInfoFrame.isEnabled = false;
 	menuWindow.addChild(chessInfoFrame);
 
-	Vec2f play_size = Vec2f(100, 30);
+	Vec2f play_size = Vec2f(150, 30);
 	Button@ loadChessButton = @Button(Vec2f(chessInfoFrame.size.x / 2 - play_size.x / 2, chessInfoFrame.size.y - 40), play_size, "Play", SColor(255, 255, 255, 255), "Sakana_14");
 	loadChessButton.addClickListener(loadChessListener);
 	loadChessButton.name = "loadChessButton";
@@ -555,9 +582,21 @@ void AddSettings(CRules@ this, Rectangle@ settingsFrame)
 	f32 gap = 5;
 	f32 prevHeight = 0;
 
-	// path line toggle (all settings are on by default)
+	// all settings are on by default
+	// next level swap toggle
+	bool next_level_swap = this.get_bool("next_level_swap");
+	Button@ nextLevelSwapToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Next level swap: " + (next_level_swap ? "ON" : "OFF"), SColor(255, 255, 255, 255));
+	nextLevelSwapToggle.name = "nextLevelSwapToggle";
+	nextLevelSwapToggle.selfLabeled = true;
+	nextLevelSwapToggle.rectColor = SColor(255, 255, 115, 55);
+	nextLevelSwapToggle.toggled = next_level_swap;
+	nextLevelSwapToggle.addClickListener(toggleListener);
+	settingsFrame.addChild(nextLevelSwapToggle);
+	prevHeight += buttonSize.y + gap;
+	
+	// path line toggle
 	bool path_line = this.get_bool("path_line");
-	Button@ disablePathLineToggle = @Button(Vec2f(10, 0), buttonSize, "Disable path line (WIP): " + (path_line ? "ON" : "OFF"), SColor(255, 255, 255, 255));
+	Button@ disablePathLineToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Disable path line (WIP): " + (path_line ? "ON" : "OFF"), SColor(255, 255, 255, 255));
 	disablePathLineToggle.name = "disablePathLineToggle";
 	disablePathLineToggle.selfLabeled = true;
 	disablePathLineToggle.rectColor = SColor(255, 255, 115, 55);
@@ -603,6 +642,14 @@ void AddSettings(CRules@ this, Rectangle@ settingsFrame)
 void UpdateSettings(CRules@ this)
 {
 	// updates the buttons in GUI
+	Button@ nextLevelSwapToggle = cast<Button@>(settingsFrame.getChild("nextLevelSwapToggle"));
+	if (nextLevelSwapToggle !is null)
+	{
+		bool next_level_swap = nextLevelSwapToggle.toggled;
+		this.set_bool("next_level_swap", next_level_swap);
+		nextLevelSwapToggle.desc = "Next level swap: " + (next_level_swap ? "ON" : "OFF");
+	}
+
 	Button@ disablePathLineToggle = cast<Button@>(settingsFrame.getChild("disablePathLineToggle"));
 	if (disablePathLineToggle !is null)
 	{
@@ -638,6 +685,14 @@ void UpdateSettings(CRules@ this)
 
 void setCachedStates(CRules@ this)
 {
+	Button@ nextLevelSwapToggle = cast<Button@>(settingsFrame.getChild("nextLevelSwapToggle"));
+	if (nextLevelSwapToggle !is null)
+	{
+		bool next_level_swap = nextLevelSwapToggle.getBool("next_level_swap", "parkour_settings");
+		this.set_bool("next_level_swap", next_level_swap);
+		nextLevelSwapToggle.toggled = next_level_swap;
+	}
+
 	Button@ disablePathLineToggle = cast<Button@>(settingsFrame.getChild("disablePathLineToggle"));
 	if (disablePathLineToggle !is null)
 	{

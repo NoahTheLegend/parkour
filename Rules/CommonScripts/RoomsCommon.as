@@ -2,6 +2,7 @@
 
 Vec2f ROOM_SIZE = Vec2f(100, 100) * 8;
 
+const u32 base_room_set_delay = 15;
 const u8 tiles_per_tick_base = 15;
 const u32 room_creation_delay_base = 0;
 const u32 base_exit_delay = 5;
@@ -117,6 +118,8 @@ void EraseRoom(CRules@ this, Vec2f pos, Vec2f size, u8 room_id)
             {
                 map.server_SetTile(Vec2f(x, y), CMap::tile_empty);
             }
+
+            map.server_setFloodWaterWorldspace(Vec2f(x, y), false);
         }
     }
 }

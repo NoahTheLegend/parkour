@@ -910,56 +910,76 @@ void AddMarker(CMap@ map, int offset, const string& in name)
 	map.AddMarker(map.getTileWorldPosition(offset), name);
 }
 
-void SaveMap(CMap@ map, const string &in fileName)
+void SaveMap(CMap@ map, const string &in fileName, Vec2f topLeft, Vec2f bottomRight)
 {
-	const u32 width = map.tilemapwidth;
-	const u32 height = map.tilemapheight;
-	const u32 space = width * height;
+	// clamp and convert to integer tile coordinates
+	int tlx = int(Maths::Floor(topLeft.x));
+	int tly = int(Maths::Floor(topLeft.y));
+	int brx = int(Maths::Floor(bottomRight.x));
+	int bry = int(Maths::Floor(bottomRight.y));
+
+	if (tlx > brx) { int tmp = tlx; tlx = brx; brx = tmp; }
+	if (tly > bry) { int tmp = tly; tly = bry; bry = tmp; }
+
+	tlx = Maths::Max(0, tlx);
+	tly = Maths::Max(0, tly);
+	brx = Maths::Min(int(map.tilemapwidth) - 1, brx);
+	bry = Maths::Min(int(map.tilemapheight) - 1, bry);
+
+	const u32 width = brx - tlx + 1;
+	const u32 height = bry - tly + 1;
+
+	if (width == 0 || height == 0) return;
 
 	CFileImage image(width, height, true);
 	image.setFilename(fileName, IMAGE_FILENAME_BASE_MAPS);
 
-	// image starts at -1, 0
-	image.nextPixel();
-
-	// iterate through tiles
-	for(uint i = 0; i < space; i++)
+	// iterate through tiles in rectangle
+	for (int y = tly; y <= bry; ++y)
 	{
-		SColor color = getColorFromTileType(map.getTile(i).type);
-		if(map.isInWater(map.getTileWorldPosition(i)))
+		for (int x = tlx; x <= brx; ++x)
 		{
-			if(color == map_colors::sky)
+			int i = x + y * map.tilemapwidth;
+			SColor color = getColorFromTileType(map.getTile(i).type);
+			if (map.isInWater(map.getTileWorldPosition(i)))
 			{
-				color = map_colors::water_air;
+				if (color == map_colors::sky)
+				{
+					color = map_colors::water_air;
+				}
+				else
+				{
+					color = map_colors::water_backdirt;
+				}
 			}
-			else
-			{
-				color = map_colors::water_backdirt;
-			}
+			image.setPixelAtPosition(x - tlx, y - tly, color, false);
 		}
-		image.setPixelAndAdvance(color);
 	}
 
-	// iterate through blobs
+	// iterate through blobs and only write those inside the rectangle
 	CBlob@[] blobs;
 	getBlobs(@blobs);
-	for(uint i = 0; i < blobs.length; i++)
+	for (uint i = 0; i < blobs.length; i++)
 	{
 		CBlob@ blob = blobs[i];
-		if(blob.getShape() is null) continue;
+		if (blob.getShape() is null) continue;
 
 		SColor color;
 		Vec2f offset;
-
 		getInfoFromBlob(blob, color, offset);
-		if(color == map_colors::unused) continue;
+		if (color == map_colors::unused) continue;
 
 		const Vec2f position = map.getTileSpacePosition(blob.getPosition() + offset);
+		int px = int(Maths::Floor(position.x));
+		int py = int(Maths::Floor(position.y));
 
-		image.setPixelAtPosition(position.x, position.y, color, false);
+		if (px >= tlx && px <= brx && py >= tly && py <= bry)
+		{
+			image.setPixelAtPosition(px - tlx, py - tly, color, false);
+		}
 	}
 
-	// iterate through markers
+	// iterate through markers and only write those inside the rectangle
 	const array<string> TEAM_NAME =
 	{
 		"blue",
@@ -972,34 +992,41 @@ void SaveMap(CMap@ map, const string &in fileName)
 		"gray"
 	};
 
-	for(u8 i = 0; i < TEAM_NAME.length; i++)
+	for (u8 i = 0; i < TEAM_NAME.length; i++)
 	{
-		array<Vec2f> position;
-
+		array<Vec2f> positions;
 		SColor color;
 
-		if(map.getMarkers(TEAM_NAME[i]+" main spawn", @position))
+		if (map.getMarkers(TEAM_NAME[i] + " main spawn", @positions))
 		{
-			for(u8 j = 0; j < position.length; j++)
+			for (u8 j = 0; j < positions.length; j++)
 			{
 				color = map_colors::alpha_spawn;
 				color.setAlpha(0x80 | getChannelFromTeam(i));
-				position[j] = map.getTileSpacePosition(position[j]);
-
-				image.setPixelAtPosition(position[j].x, position[j].y, color, false);
+				Vec2f p = map.getTileSpacePosition(positions[j]);
+				int px = int(Maths::Floor(p.x));
+				int py = int(Maths::Floor(p.y));
+				if (px >= tlx && px <= brx && py >= tly && py <= bry)
+				{
+					image.setPixelAtPosition(px - tlx, py - tly, color, false);
+				}
 			}
 		}
 
-		position.clear();
-		if(map.getMarkers(TEAM_NAME[i]+" spawn", @position))
+		positions.clear();
+		if (map.getMarkers(TEAM_NAME[i] + " spawn", @positions))
 		{
-			for(u8 j = 0; j < position.length; j++)
+			for (u8 j = 0; j < positions.length; j++)
 			{
 				color = map_colors::alpha_flag;
 				color.setAlpha(0x80 | getChannelFromTeam(i));
-				position[j] = map.getTileSpacePosition(position[j]);
-
-				image.setPixelAtPosition(position[j].x, position[j].y, color, false);
+				Vec2f p = map.getTileSpacePosition(positions[j]);
+				int px = int(Maths::Floor(p.x));
+				int py = int(Maths::Floor(p.y));
+				if (px >= tlx && px <= brx && py >= tly && py <= bry)
+				{
+					image.setPixelAtPosition(px - tlx, py - tly, color, false);
+				}
 			}
 		}
 	}

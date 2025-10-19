@@ -925,7 +925,6 @@ bool onServerProcessChat(CRules@ this,const string& in text_in,string& out text_
 				{
 					if (tokens.length == 2) server_MakeSeed(blob.getPosition(),"tree_"+tokens[1],600,1,16);
 				}
-
 				else if (tokens[0]=="!spawnwater") 
 					getMap().server_setFloodWaterWorldspace(blob.getPosition(),true);
 

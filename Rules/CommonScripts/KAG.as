@@ -7,6 +7,7 @@ void onInit(CRules@ this)
 {
 	this.addCommandID("create_rooms_grid");
 	this.addCommandID("set_room");
+	this.addCommandID("editor");
 	
 	LoadDefaultMapLoaders();
 	LoadDefaultGUI();

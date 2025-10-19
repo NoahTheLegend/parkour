@@ -2,6 +2,8 @@
 
 void onInit(CBlob@ this)
 {
+	this.addCommandID("teleport");
+
 	this.getShape().SetRotationsAllowed(false);
 	this.getSprite().getConsts().accurateLighting = true;
 
@@ -40,16 +42,63 @@ void onTick(CBlob@ this)
 	}
 }
 
+void GetButtonsFor(CBlob@ this, CBlob@ caller)
+{
+	CRules@ rules = getRules();
+	if (rules is null) return;
+
+	// check if next level swap is enabled
+	bool next_level_swap = rules.get_bool("next_level_swap");
+	if (!next_level_swap) return;
+
+	CBitStream params;
+	params.write_u16(caller.getNetworkID());
+
+	CButton@ button = caller.CreateGenericButton(
+		11,
+		Vec2f(0, 0),
+		this,
+		this.getCommandID("teleport"),
+		"Enter next level",
+		params
+	);
+}
+
+void onCommand(CBlob@ this, u8 cmd, CBitStream@ params)
+{
+	if (cmd == this.getCommandID("teleport"))
+	{
+		u16 pid;
+		if (!params.saferead_u16(pid)) { print("Failed to read player ID"); return; }
+
+		// handled in onTick to allow delay
+		this.set_u16("teleported_blob_id", pid);
+		this.set_u32("teleport_time", getGameTime());
+
+		this.Tag("ready");
+		this.getCurrentScript().tickFrequency = 1;
+	}
+}
+
 void onCollision(CBlob@ this, CBlob@ blob, bool solid)
 {
 	if (blob is null) return;
 	if (!blob.hasTag("player")) return;
 
+	CRules@ rules = getRules();
+	if (rules is null) return;
+
+	// check if next level swap is enabled
+	bool next_level_swap = rules.get_bool("next_level_swap");
+	if (!next_level_swap) return;
+
 	// teleport player into next room
 	if (this.getTickSinceCreated() < 1) return; // wait a bit after creation
-	this.Tag("ready");
+
 	this.set_u16("teleported_blob_id", blob.getNetworkID());
 	this.set_u32("teleport_time", getGameTime());
+
+	this.Tag("ready");
 	this.getCurrentScript().tickFrequency = 1;
 }
 

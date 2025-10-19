@@ -173,7 +173,12 @@ void toggleListener(int x, int y, int button, IGUIItem@ sender)
     // note for developers: all buttons are ON by default when config is firstly created
 
     string name = btn.name;
-    if (name == "disablePathLineToggle")
+    if (name == "nextLevelSwapToggle")
+    {
+        btn.toggled = !btn.toggled;
+        btn.saveBool("next_level_swap", btn.toggled, "parkour_settings");
+    }
+    else if (name == "disablePathLineToggle")
     {
         btn.toggled = !btn.toggled;
         btn.saveBool("path_line", btn.toggled, "parkour_settings");
@@ -210,56 +215,58 @@ void levelsClickListener(int x, int y, int button, IGUIItem@ sender)
     Button@ knightLevelsButton = cast<Button@>(levelsFrame.getChild("knightLevelsButton"));
     Button@ archerLevelsButton = cast<Button@>(levelsFrame.getChild("archerLevelsButton"));
     Button@ builderLevelsButton = cast<Button@>(levelsFrame.getChild("builderLevelsButton"));
+    Button@ customLevelsButton = cast<Button@>(levelsFrame.getChild("customLevelsButton"));
 
     string name = btn.name;
     Rectangle@ selected_frame;
 
-    if (name == "knightLevelsButton")
+    // handle knight/archer/builder/custom level buttons with less duplicate code
+    if (name == "knightLevelsButton" ||
+        name == "archerLevelsButton" ||
+        name == "builderLevelsButton" ||
+        name == "customLevelsButton")
     {
-        @selected_frame = @knightLevelsFrame;
+        array<string> levelBtns = { "knightLevelsButton", "archerLevelsButton", "builderLevelsButton", "customLevelsButton" };
+        array<Rectangle@> framesArr = { @knightLevelsFrame, @archerLevelsFrame, @builderLevelsFrame, @customLevelsFrame };
+        array<Button@> btnArr = { @knightLevelsButton, @archerLevelsButton, @builderLevelsButton, @customLevelsButton };
 
-        knightLevelsFrame.isEnabled = true;
-        archerLevelsFrame.isEnabled = false;
-        builderLevelsFrame.isEnabled = false;
+        int selectedIdx = -1;
+        for (int i = 0; i < int(levelBtns.size()); i++)
+        {
+            if (name == levelBtns[i])
+            {
+                selectedIdx = i;
+                break;
+            }
+        }
 
-        if (knightLevelsButton !is null) knightLevelsButton.rectColor = SColor(255, 255, 25, 55);
-        if (archerLevelsButton !is null) archerLevelsButton.rectColor = SColor(255, 155, 25, 55);
-        if (builderLevelsButton !is null) builderLevelsButton.rectColor = SColor(255, 155, 25, 55);
-    }
-    else if (name == "archerLevelsButton")
-    {
-        @selected_frame = @archerLevelsFrame;
+        if (selectedIdx != -1)
+        {
+            for (int i = 0; i < int(framesArr.size()); i++)
+            {
+                Rectangle@ f = framesArr[i];
+                if (f !is null) f.isEnabled = (i == selectedIdx);
 
-        archerLevelsFrame.isEnabled = true;
-        knightLevelsFrame.isEnabled = false;
-        builderLevelsFrame.isEnabled = false;
+                Button@ b = btnArr[i];
+                if (b !is null)
+                {
+                    b.rectColor = (i == selectedIdx) ? SColor(255, 255, 25, 55) : SColor(255, 155, 25, 55);
+                }
 
-        if (archerLevelsButton !is null) archerLevelsButton.rectColor = SColor(255, 255, 25, 55);
-        if (knightLevelsButton !is null) knightLevelsButton.rectColor = SColor(255, 155, 25, 55);
-        if (builderLevelsButton !is null) builderLevelsButton.rectColor = SColor(255, 155, 25, 55);
-    }
-    else if (name == "builderLevelsButton")
-    {
-        @selected_frame = @builderLevelsFrame;
+                if (i == selectedIdx)
+                    @selected_frame = framesArr[i];
+            }
+        }
 
-        builderLevelsFrame.isEnabled = true;
-        knightLevelsFrame.isEnabled = false;
-        archerLevelsFrame.isEnabled = false;
+        // build levels grid for the selected frame
+        if (selected_frame !is null && selected_frame.isEnabled)
+        {
+            Rectangle@ slider = cast<Rectangle@>(selected_frame.getChild("slider"));
+            if (slider is null) return;
 
-        if (builderLevelsButton !is null) builderLevelsButton.rectColor = SColor(255, 255, 25, 55);
-        if (knightLevelsButton !is null) knightLevelsButton.rectColor = SColor(255, 155, 25, 55);
-        if (archerLevelsButton !is null) archerLevelsButton.rectColor = SColor(255, 155, 25, 55);
-    }
-
-    // build levels grid using UpdateHelpFrameVideos as reference
-    if (selected_frame !is null && selected_frame.isEnabled)
-    {
-        Rectangle@ slider = cast<Rectangle@>(selected_frame.getChild("slider"));
-        if (slider is null) return;
-
-        //slider._customData = 0; // reset to first page
-        Vec2f grid = default_grid_levels;
-        UpdateLevels(slider, grid);
+            Vec2f grid = default_grid_levels;
+            UpdateLevels(slider, grid);
+        }
     }
 }
 
@@ -384,7 +391,7 @@ void loadLevelClickListener(int x, int y, int button, IGUIItem@ sender)
     u8 type = getTypeFromName(spl[0]);
     int room_id = parseInt(spl[1]);
     if (room_id < 0) return;
-    print(""+room_id);
+
     Vec2f pos = Vec2f_zero; // todo: get from level data
     sendRoomCommand(rules, type, room_id, pos);
 }
@@ -505,4 +512,17 @@ void UpdateHelpFrameVideos(Rectangle@ slider, Vec2f grid)
         active_help_video_positions.push_back(pos);
         help_videos[index].show();
     }
+}
+
+void openEditorListener(int x, int y, int button, IGUIItem@ sender)
+{
+    if (getLocalPlayer() is null) return;
+
+    CRules@ rules = getRules();
+    if (rules is null) return;
+
+    CBitStream params;
+    params.write_u16(getLocalPlayer().getNetworkID()); // player id
+
+    rules.SendCommand(rules.getCommandID("editor"), params);
 }

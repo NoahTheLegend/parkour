@@ -932,13 +932,14 @@ class Button : GenericGUIItem{
 			Vec2f textSize;
 			GUI::GetTextDimensions(desc, textSize);
 
-			Vec2f position = this.position + Vec2f((size.x/2)-(textSize.x/2),(size.y/2)-(textSize.y/2)) - Vec2f(2, 1);
-			GUI::DrawText(desc, position, color);
+			int extra = 0;
+			Vec2f textPos = this.position + Vec2f((size.x - textSize.x) * 0.5f, (size.y - textSize.y) * 0.5f) - Vec2f(2, 1 + extra);
+			GUI::DrawText(desc, textPos, color);
 		}
+
 		if(_isLocked) GUI::DrawRectangle(position, position+size, rectColor);
 		GenericGUIItem::drawSelf();
 	}
-
 }
 
 class ScrollBar : GenericGUIItem{
