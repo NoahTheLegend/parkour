@@ -1,5 +1,6 @@
 #include "PseudoVideoPlayer.as";
 #include "RoomsCommon.as";
+#include "RoomsHandlers.as";
 
 void menuSwitchListener(int x, int y, int button, IGUIItem@ sender)
 {
@@ -140,27 +141,12 @@ void loadChessListener(int x, int y, int button, IGUIItem@ sender)
 
     CRules@ rules = getRules();
     if (rules is null) return;
-
     if (sender is null) return;
 
     Button@ level = cast<Button@>(sender);
     if (level is null) return;
 
-    string name = "ChessLevel.png";
-    u8 type = RoomType::chess;
-
-    int room_id = 5012;
-    Vec2f pos = Vec2f_zero;
-
-    CBitStream params;
-    params.write_u16(getLocalPlayer().getNetworkID()); // player id
-    params.write_u8(type);
-    params.write_s32(room_id); // room id
-    params.write_Vec2f(ROOM_SIZE); // room size
-    params.write_Vec2f(pos); // start pos // todo: get from level data
-
-    rules.SendCommand(rules.getCommandID("set_room"), params);
-    print("sent "+rules.getCommandID("set_room"));
+    LoadChessLevel(rules);
 }
 
 void toggleListener(int x, int y, int button, IGUIItem@ sender)
@@ -212,10 +198,16 @@ void levelsClickListener(int x, int y, int button, IGUIItem@ sender)
     Button@ btn = cast<Button@>(sender);
     if (btn is null) return;
 
-    Button@ knightLevelsButton = cast<Button@>(levelsFrame.getChild("knightLevelsButton"));
-    Button@ archerLevelsButton = cast<Button@>(levelsFrame.getChild("archerLevelsButton"));
-    Button@ builderLevelsButton = cast<Button@>(levelsFrame.getChild("builderLevelsButton"));
-    Button@ customLevelsButton = cast<Button@>(levelsFrame.getChild("customLevelsButton"));
+    Button@ createRoom = cast<Button@>(levelsFrame.getChild("createRoomButton"));
+    if (createRoom is null) return;
+
+    Rectangle@ levelsWrapper = cast<Rectangle@>(levelsFrame.getChild("levelsWrapper"));
+    if (levelsWrapper is null) return;
+
+    Button@ knightLevelsButton = cast<Button@>(levelsWrapper.getChild("knightLevelsButton"));
+    Button@ archerLevelsButton = cast<Button@>(levelsWrapper.getChild("archerLevelsButton"));
+    Button@ builderLevelsButton = cast<Button@>(levelsWrapper.getChild("builderLevelsButton"));
+    Button@ customLevelsButton = cast<Button@>(levelsWrapper.getChild("customLevelsButton"));
 
     string name = btn.name;
     Rectangle@ selected_frame;
@@ -378,8 +370,14 @@ void loadLevelClickListener(int x, int y, int button, IGUIItem@ sender)
 
     CRules@ rules = getRules();
     if (rules is null) return;
-
     if (sender is null) return;
+
+    u8 room_id = rules.get_u8("captured_room_id");
+    if (room_id == 255)
+    {
+        print("No free room id available for level");
+        return;
+    }
 
     Rectangle@ level = cast<Rectangle@>(sender);
     if (level is null) return;
@@ -389,11 +387,11 @@ void loadLevelClickListener(int x, int y, int button, IGUIItem@ sender)
     if (spl.length < 2) return;
 
     u8 type = getTypeFromName(spl[0]);
-    int room_id = parseInt(spl[1]);
-    if (room_id < 0) return;
+    int level_id = parseInt(spl[1]);
+    if (level_id < 0) return;
 
-    Vec2f pos = Vec2f_zero; // todo: get from level data
-    sendRoomCommand(rules, type, room_id, pos);
+    Vec2f pos = getRoomPosFromID(room_id);
+    sendRoomCommand(rules, type, level_id, pos);
 }
 
 void levelHoverListener(bool is_over, IGUIItem@ sender)
@@ -514,6 +512,19 @@ void UpdateHelpFrameVideos(Rectangle@ slider, Vec2f grid)
     }
 }
 
+void createRoomClickListener(int x, int y, int button, IGUIItem@ sender)
+{
+    if (getLocalPlayer() is null) return;
+
+    CRules@ rules = getRules();
+    if (rules is null) return;
+
+    CBitStream params;
+    params.write_u16(getLocalPlayer().getNetworkID()); // player id
+
+    rules.SendCommand(rules.getCommandID("create_room"), params);
+}
+
 void openEditorListener(int x, int y, int button, IGUIItem@ sender)
 {
     if (getLocalPlayer() is null) return;
@@ -526,3 +537,4 @@ void openEditorListener(int x, int y, int button, IGUIItem@ sender)
 
     rules.SendCommand(rules.getCommandID("editor"), params);
 }
+

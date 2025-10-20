@@ -1,4 +1,5 @@
 #include "RoomsCommon.as";
+#include "RoomsHandlers.as";
 
 void onInit(CBlob@ this)
 {

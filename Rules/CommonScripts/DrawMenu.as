@@ -152,6 +152,8 @@ void onTick(CRules@ this)
     	setCachedStates(this);
 	}
 
+	EnsureRoomOwned(this);
+
 	CControls@ controls = getControls();
 	if (controls.isKeyJustPressed(KEY_F1)) showMenu = !showMenu;
 	
@@ -169,6 +171,9 @@ void HandleInput(CRules@ rules, CControls@ controls, CPlayer@ player)
 {
 	if (!showMenu) return;
 
+	Rectangle@ levelsWrapper = cast<Rectangle@>(levelsFrame.getChild("levelsWrapper"));
+	if (levelsWrapper is null) return;
+
 	// A / D interaction
 	if (controls.isKeyJustPressed(KEY_KEY_A))
 	{
@@ -180,9 +185,8 @@ void HandleInput(CRules@ rules, CControls@ controls, CPlayer@ player)
 			Vec2f scroller_pos = scroller.getAbsolutePosition();
 			scrollerClickListener(scroller_pos.x, scroller_pos.y + 1, 1, scroller);
 		}
-		else if (levelsFrame.isEnabled)
+		else if (levelsWrapper.isEnabled)
 		{
-			
 			bool knight_levels = knightLevelsFrame.isEnabled;
 			bool archer_levels = archerLevelsFrame.isEnabled;
 			bool builder_levels = builderLevelsFrame.isEnabled;
@@ -192,18 +196,18 @@ void HandleInput(CRules@ rules, CControls@ controls, CPlayer@ player)
 
 			if (knight_levels)
 			{
-				@scroller = cast<Button@>(levelsFrame.getChild("knightLevelsFrame").getChild("levelsFrameScrollerLeft"));
-				@slider = cast<Rectangle@>(levelsFrame.getChild("knightLevelsFrame").getChild("slider"));
+				@scroller = cast<Button@>(levelsWrapper.getChild("knightLevelsFrame").getChild("levelsFrameScrollerLeft"));
+				@slider = cast<Rectangle@>(levelsWrapper.getChild("knightLevelsFrame").getChild("slider"));
 			}
 			else if (archer_levels)
 			{
-				@scroller = cast<Button@>(levelsFrame.getChild("archerLevelsFrame").getChild("levelsFrameScrollerLeft"));
-				@slider = cast<Rectangle@>(levelsFrame.getChild("archerLevelsFrame").getChild("slider"));
+				@scroller = cast<Button@>(levelsWrapper.getChild("archerLevelsFrame").getChild("levelsFrameScrollerLeft"));
+				@slider = cast<Rectangle@>(levelsWrapper.getChild("archerLevelsFrame").getChild("slider"));
 			}
 			else if (builder_levels)
 			{
-				@scroller = cast<Button@>(levelsFrame.getChild("builderLevelsFrame").getChild("levelsFrameScrollerLeft"));
-				@slider = cast<Rectangle@>(levelsFrame.getChild("builderLevelsFrame").getChild("slider"));
+				@scroller = cast<Button@>(levelsWrapper.getChild("builderLevelsFrame").getChild("levelsFrameScrollerLeft"));
+				@slider = cast<Rectangle@>(levelsWrapper.getChild("builderLevelsFrame").getChild("slider"));
 			}
 
 			Vec2f scroller_pos = scroller.getAbsolutePosition();
@@ -220,7 +224,7 @@ void HandleInput(CRules@ rules, CControls@ controls, CPlayer@ player)
 			Vec2f scroller_pos = scroller.getAbsolutePosition();
 			scrollerClickListener(scroller_pos.x, scroller_pos.y + 1, 1, scroller);
 		}
-		else if (levelsFrame.isEnabled)
+		else if (levelsWrapper.isEnabled)
 		{
 			bool knight_levels = knightLevelsFrame.isEnabled;
 			bool archer_levels = archerLevelsFrame.isEnabled;
@@ -231,18 +235,18 @@ void HandleInput(CRules@ rules, CControls@ controls, CPlayer@ player)
 
 			if (knight_levels)
 			{
-				@scroller = cast<Button@>(levelsFrame.getChild("knightLevelsFrame").getChild("levelsFrameScrollerRight"));
-				@slider = cast<Rectangle@>(levelsFrame.getChild("knightLevelsFrame").getChild("slider"));
+				@scroller = cast<Button@>(levelsWrapper.getChild("knightLevelsFrame").getChild("levelsFrameScrollerRight"));
+				@slider = cast<Rectangle@>(levelsWrapper.getChild("knightLevelsFrame").getChild("slider"));
 			}
 			else if (archer_levels)
 			{
-				@scroller = cast<Button@>(levelsFrame.getChild("archerLevelsFrame").getChild("levelsFrameScrollerRight"));
-				@slider = cast<Rectangle@>(levelsFrame.getChild("archerLevelsFrame").getChild("slider"));
+				@scroller = cast<Button@>(levelsWrapper.getChild("archerLevelsFrame").getChild("levelsFrameScrollerRight"));
+				@slider = cast<Rectangle@>(levelsWrapper.getChild("archerLevelsFrame").getChild("slider"));
 			}
 			else if (builder_levels)
 			{
-				@scroller = cast<Button@>(levelsFrame.getChild("builderLevelsFrame").getChild("levelsFrameScrollerRight"));
-				@slider = cast<Rectangle@>(levelsFrame.getChild("builderLevelsFrame").getChild("slider"));
+				@scroller = cast<Button@>(levelsWrapper.getChild("builderLevelsFrame").getChild("levelsFrameScrollerRight"));
+				@slider = cast<Rectangle@>(levelsWrapper.getChild("builderLevelsFrame").getChild("slider"));
 			}
 
 			Vec2f scroller_pos = scroller.getAbsolutePosition();
@@ -285,7 +289,7 @@ void InitializeGUI(CRules@ this)
 
 	Label@ subtitle = @Label(Vec2f(8, 26), Vec2f(frameSize.x - 12, 16), "", SColor(255, 0, 0, 0), false, "Terminus_14");
 	subtitle.name = "subtitle";
-	subtitle.setText(subtitle.textWrap("CONTROLS:\n[Build Modifier] - Teleport\n[Mark Player] - Teleport to Anchor\n[Build Modifier] + [Mark Player] - Replace Anchor\n\n* Write !create to make a room, it is located inside the white square.\n\n* Load a level into your room to start.\n\n* You can create and load own levels!\nWrite !editor, !save [name], or !load [name].\n\n* Navigate through the menu for more info.", "Terminus_14"));
+	subtitle.setText(subtitle.textWrap("CONTROLS:\n[Build Modifier] - Teleport\n[Mark Player] - Teleport to Anchor\n[Build Modifier] + [Mark Player] - Replace Anchor\n\n* Go to Levels section to create a room, it is located inside the white square.\n\n* Load a level into your room to start.\n\n* You can create and load own levels!\nWrite !editor, !save [name], or !load [name].\n\n* Navigate through the menu for more info.", "Terminus_14"));
 	mainFrame.addChild(subtitle);
 
 	// switchers
@@ -378,6 +382,14 @@ void InitializeGUI(CRules@ this)
 	levelsFrame.isEnabled = false;
 	menuWindow.addChild(levelsFrame);
 
+	Vec2f create_room_size = Vec2f(200, 100);
+	Vec2f create_room_pos = Vec2f((levelsFrame.size.x - create_room_size.x) / 2 - 0, (levelsFrame.size.y - create_room_size.y) / 2);
+	Button@ createRoomButton = @Button(create_room_pos, create_room_size, "Create a room", SColor(255, 255, 255, 255), "Sakana_18");
+	createRoomButton.name = "createRoomButton";
+	createRoomButton.addClickListener(createRoomClickListener);
+	createRoomButton.rectColor = SColor(255, 255, 25, 25);
+	levelsFrame.addChild(createRoomButton);
+
 	Label@ levelsTitle = @Label(title.localPosition, title.size, "", SColor(255, 0, 0, 0), true, title.font);
 	levelsTitle.name = "title";
 	levelsTitle.setText(levelsTitle.textWrap("", title.font)); // not used, hidden under the tab buttons
@@ -393,18 +405,23 @@ void InitializeGUI(CRules@ this)
 	Vec2f builderButtonPos = archerButtonPos + Vec2f(levelsButtonSize.x, 0);
 	Vec2f customButtonPos = builderButtonPos + Vec2f(levelsButtonSize.x, 0);
 
+	Rectangle@ levelsWrapper = @Rectangle(Vec2f_zero, mainFrame.size, mainFrame.color);
+	levelsWrapper.name = "levelsWrapper";
+	levelsWrapper.isEnabled = false; // player has to press the create room button first
+	levelsFrame.addChild(levelsWrapper);
+
 	// KNIGHT
 	Button@ knightLevelsButton = @Button(knightButtonPos, levelsButtonSize, "Knight", SColor(255, 255, 255, 255), "Sakana_14");
 	knightLevelsButton.addClickListener(levelsClickListener);
 	knightLevelsButton.name = "knightLevelsButton";
 	knightLevelsButton.rectColor = SColor(255, 255, 25, 55);
-	levelsFrame.addChild(knightLevelsButton);
+	levelsWrapper.addChild(knightLevelsButton);
 
 	// knight levels frame
 	@knightLevelsFrame = @Rectangle(Vec2f_zero, mainFrame.size, mainFrame.color);
 	knightLevelsFrame.name = "knightLevelsFrame";
 	knightLevelsFrame.isEnabled = true; // default visible for knight levels
-	levelsFrame.addChild(knightLevelsFrame);
+	levelsWrapper.addChild(knightLevelsFrame);
 
 	// slider and scrollers for knight levels
 	Rectangle@ knightLevelsFrameContentSlider = @Rectangle(mainFrame.localPosition + Vec2f(10, 32), mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
@@ -431,13 +448,13 @@ void InitializeGUI(CRules@ this)
 	archerLevelsButton.addClickListener(levelsClickListener);
 	archerLevelsButton.name = "archerLevelsButton";
 	archerLevelsButton.rectColor = SColor(255, 155, 25, 55);
-	levelsFrame.addChild(archerLevelsButton);
+	levelsWrapper.addChild(archerLevelsButton);
 
 	// archer levels frame
 	@archerLevelsFrame = @Rectangle(Vec2f_zero, mainFrame.size, mainFrame.color);
 	archerLevelsFrame.name = "archerLevelsFrame";
 	archerLevelsFrame.isEnabled = false;
-	levelsFrame.addChild(archerLevelsFrame);
+	levelsWrapper.addChild(archerLevelsFrame);
 
 	// slider and scrollers for archer levels
 	Rectangle@ archerLevelsFrameContentSlider = @Rectangle(mainFrame.localPosition + Vec2f(10, 32), mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
@@ -464,13 +481,13 @@ void InitializeGUI(CRules@ this)
 	builderLevelsButton.addClickListener(levelsClickListener);
 	builderLevelsButton.name = "builderLevelsButton";
 	builderLevelsButton.rectColor = SColor(255, 155, 25, 55);
-	levelsFrame.addChild(builderLevelsButton);
+	levelsWrapper.addChild(builderLevelsButton);
 
 	// builder levels frame
 	@builderLevelsFrame = @Rectangle(Vec2f_zero, mainFrame.size, mainFrame.color);
 	builderLevelsFrame.name = "builderLevelsFrame";
 	builderLevelsFrame.isEnabled = false;
-	levelsFrame.addChild(builderLevelsFrame);
+	levelsWrapper.addChild(builderLevelsFrame);
 
 	// slider and scrollers for builder levels
 	Rectangle@ builderLevelsFrameContentSlider = @Rectangle(mainFrame.localPosition + Vec2f(10, 32), mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
@@ -497,13 +514,13 @@ void InitializeGUI(CRules@ this)
 	customLevelsButton.addClickListener(levelsClickListener);
 	customLevelsButton.name = "customLevelsButton";
 	customLevelsButton.rectColor = SColor(255, 155, 25, 55);
-	levelsFrame.addChild(customLevelsButton);
+	levelsWrapper.addChild(customLevelsButton);
 
 	// custom levels frame
 	@customLevelsFrame = @Rectangle(Vec2f_zero, mainFrame.size, mainFrame.color);
 	customLevelsFrame.name = "customLevelsFrame";
 	customLevelsFrame.isEnabled = false;
-	levelsFrame.addChild(customLevelsFrame);
+	levelsWrapper.addChild(customLevelsFrame);
 
 	// editor button
 	Vec2f editor_size = Vec2f(150, 30);
@@ -837,4 +854,39 @@ Vec2f getMenuPosShown()
 {
 	Vec2f screen_size = getDriver().getScreenDimensions();
 	return Vec2f(screen_size.x / 2 - menuSize.x / 2 - 150, screen_size.y - menuSize.y - slideOffset);
+}
+
+void EnsureRoomOwned(CRules@ this)
+{
+	u8 room_id = this.get_u8("captured_room_id");
+	if (room_id != 255)
+	{
+		// hide Create Room button and show levels
+		Rectangle@ levelsWrapper = cast<Rectangle@>(levelsFrame.getChild("levelsWrapper"));
+		if (levelsWrapper !is null && !levelsWrapper.isEnabled)
+		{
+			Button@ createRoomButton = cast<Button@>(levelsFrame.getChild("createRoomButton"));
+			if (createRoomButton !is null)
+			{
+				createRoomButton.isEnabled = false;
+			}
+
+			levelsWrapper.isEnabled = true;
+		}
+	}
+	else
+	{
+		// show Create Room button and hide levels
+		Rectangle@ levelsWrapper = cast<Rectangle@>(levelsFrame.getChild("levelsWrapper"));
+		if (levelsWrapper !is null && levelsWrapper.isEnabled)
+		{
+			Button@ createRoomButton = cast<Button@>(levelsFrame.getChild("createRoomButton"));
+			if (createRoomButton !is null)
+			{
+				createRoomButton.isEnabled = true;
+			}
+
+			levelsWrapper.isEnabled = false;
+		}
+	}
 }

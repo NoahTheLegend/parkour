@@ -1,4 +1,5 @@
 #include "RoomsCommon.as";
+#include "RoomsHandlers.as";
 
 void onInit(CBlob@ this)
 {
@@ -32,12 +33,12 @@ void onTick(CBlob@ this)
 			CRules@ rules = getRules();
 			if (rules is null) return;
 
-			u8 room_type = rules.get_u8("current_room_type");
-			s32 room_id = rules.get_s32("current_room_id");
+			u8 level_type = rules.get_u8("current_level_type");
+			s32 level_id = rules.get_s32("current_level_id");
 			Vec2f start_pos = rules.get_Vec2f("current_room_pos");
 			Vec2f room_size = rules.get_Vec2f("current_room_size");
 
-			sendRoomCommand(rules, room_type, room_id + 1, start_pos);
+			sendRoomCommand(rules, level_type, level_id + 1, start_pos);
 		}
 	}
 }
@@ -49,7 +50,7 @@ void GetButtonsFor(CBlob@ this, CBlob@ caller)
 
 	// check if next level swap is enabled
 	bool next_level_swap = rules.get_bool("next_level_swap");
-	if (!next_level_swap) return;
+	if (next_level_swap) return;
 
 	CBitStream params;
 	params.write_u16(caller.getNetworkID());

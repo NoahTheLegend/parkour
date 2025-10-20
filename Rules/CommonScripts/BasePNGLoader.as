@@ -6,6 +6,7 @@
 #include "LoaderColors.as";
 #include "LoaderUtilities.as";
 #include "CustomBlocks.as";
+#include "RoomsCommon.as";
 
 enum WAROffset
 {
@@ -48,14 +49,15 @@ class PNGLoader
 			return true;
 		}
 
-		@image = CFileImage( filename );
-
-		if(image.isLoaded())
+		@image = CFileImage(filename);
+		if (image.isLoaded())
 		{
-			SetupMap(image.getWidth(), image.getHeight());
+			print("Loading map from PNG: " + filename);
+			print("Size: " + Vec2f(MAP_GRID.x * ROOM_SIZE.x, MAP_GRID.y * ROOM_SIZE.y));
+			SetupMap(MAP_GRID.x * ROOM_SIZE.x / 8, MAP_GRID.y * ROOM_SIZE.y / 8);
 			SetupBackgrounds();
 
-			while(image.nextPixel())
+			/*while(image.nextPixel())
 			{
 				const SColor pixel = image.readPixel();
 				const int offset = image.getPixelOffset();
@@ -81,6 +83,8 @@ class PNGLoader
 					getNet().server_KeepConnectionsAlive();
 				}
 			}
+			*/
+
 			return true;
 		}
 		return false;

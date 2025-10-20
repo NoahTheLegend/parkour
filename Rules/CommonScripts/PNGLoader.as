@@ -209,7 +209,7 @@ class RoomPNGLoader
 					}
 
 					SColor col = (idx != -1) ? colors[idx] : SColor();
-					handlePixel(col, pos * map.tilesize + margin);
+					handlePixel(col, lazy_pos + pos * map.tilesize + margin);
 					placed_tiles.push_back(map.getTileOffset(lazy_pos + pos * map.tilesize));
 				}
 
@@ -254,11 +254,7 @@ class RoomPNGLoader
 				image.setPixelPosition(pixel_pos);
 				const SColor pixel = image.readPixel();
 
-				SetMesh();
-
-				handlePixel(pixel, pixel_pos * map.tilesize + margin);
-
-				FixMesh();
+				handlePixel(pixel, lazy_pos + pixel_pos * map.tilesize + margin);
 				lazy_placed_tiles.push_back(map.getTileOffset(lazy_pos + pixel_pos * map.tilesize));
 
 				lazy_pixel_index++;

@@ -442,7 +442,6 @@ bool onServerProcessChat(CRules@ this,const string& in text_in,string& out text_
 							CBitStream params;
 							params.write_bool(tokens.length > 2 ? tokens[2] == "cancel" : false);
 							this.SendCommand(this.getCommandID("wipe"), params, playerSubj);
-							print(""+XORRandom(9999));
 						}
 						else errorMessage = "Couldn't wipe "+username+" (not found)";
 					}
