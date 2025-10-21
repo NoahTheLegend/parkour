@@ -1,7 +1,10 @@
 #include "PseudoVideoPlayer.as";
+#include "Helpers.as";
 #include "RoomsCommon.as";
+#include "RoomsListeners.as";
 #include "RoomsHandlers.as";
 
+// global menu switcher
 void menuSwitchListener(int x, int y, int button, IGUIItem@ sender)
 {
     if (sender is null) return;
@@ -25,6 +28,7 @@ void menuSwitchListener(int x, int y, int button, IGUIItem@ sender)
     showMenu = !showMenu;
 }
 
+// handles main page button clicks to switch between frames
 void pageClickListener(int x, int y, int button, IGUIItem@ sender)
 {
     if (sender is null) return;
@@ -135,20 +139,7 @@ void pageClickListener(int x, int y, int button, IGUIItem@ sender)
     }
 }
 
-void loadChessListener(int x, int y, int button, IGUIItem@ sender)
-{
-    if (getLocalPlayer() is null) return;
-
-    CRules@ rules = getRules();
-    if (rules is null) return;
-    if (sender is null) return;
-
-    Button@ level = cast<Button@>(sender);
-    if (level is null) return;
-
-    LoadChessLevel(rules);
-}
-
+// handles settings buttons
 void toggleListener(int x, int y, int button, IGUIItem@ sender)
 {
     if (sender is null) return;
@@ -167,7 +158,7 @@ void toggleListener(int x, int y, int button, IGUIItem@ sender)
     else if (name == "disablePathLineToggle")
     {
         btn.toggled = !btn.toggled;
-        btn.saveBool("path_line", btn.toggled, "parkour_settings");
+        btn.saveBool("enable_pathline", btn.toggled, "parkour_settings");
     }
     else if (name == "disableMovementToggle")
     {
@@ -179,10 +170,10 @@ void toggleListener(int x, int y, int button, IGUIItem@ sender)
         btn.toggled = !btn.toggled;
         btn.saveBool("allow_moving_menu", btn.toggled, "parkour_settings");
     }
-    else if (name == "instantTeleportToggle")
+    else if (name == "continuousTeleportToggle")
     {
         btn.toggled = !btn.toggled;
-        btn.saveBool("instant_teleport", btn.toggled, "parkour_settings");
+        btn.saveBool("continuous_teleport", btn.toggled, "parkour_settings");
     }
 
     CRules@ rules = getRules();
@@ -191,7 +182,22 @@ void toggleListener(int x, int y, int button, IGUIItem@ sender)
     UpdateSettings(rules);
 }
 
-void levelsClickListener(int x, int y, int button, IGUIItem@ sender)
+// requests server to create a new room, the rest of the logic is handled on server
+void createRoomClickListener(int x, int y, int button, IGUIItem@ sender)
+{
+    if (getLocalPlayer() is null) return;
+
+    CRules@ rules = getRules();
+    if (rules is null) return;
+
+    CBitStream params;
+    params.write_u16(getLocalPlayer().getNetworkID()); // player id
+
+    rules.SendCommand(rules.getCommandID("create_room"), params);
+}
+
+// switcher for levels categories
+void levelsCategoryClickListener(int x, int y, int button, IGUIItem@ sender)
 {
     if (sender is null) return;
 
@@ -262,6 +268,7 @@ void levelsClickListener(int x, int y, int button, IGUIItem@ sender)
     }
 }
 
+// updates the levels frame based on the current page and grid size
 void UpdateLevels(Rectangle@ slider, Vec2f grid)
 {
     const bool debug_levels_bg = false; // set to true to enable debug background coloring
@@ -364,6 +371,7 @@ void UpdateLevels(Rectangle@ slider, Vec2f grid)
     }
 }
 
+// click callback for loading a level
 void loadLevelClickListener(int x, int y, int button, IGUIItem@ sender)
 {
     if (getLocalPlayer() is null) return;
@@ -394,6 +402,7 @@ void loadLevelClickListener(int x, int y, int button, IGUIItem@ sender)
     sendRoomCommand(rules, type, level_id, pos);
 }
 
+// visual hover effect for level buttons
 void levelHoverListener(bool is_over, IGUIItem@ sender)
 {
     if (sender is null) return;
@@ -419,13 +428,7 @@ void levelHoverListener(bool is_over, IGUIItem@ sender)
     }
 }
 
-float sum(array<float>@ arr)
-{
-    float s = 0.0f;
-    for (uint i = 0; i < arr.size(); i++) s += arr[i];
-    return s;
-}
-
+// scroller switcher for frames
 void scrollerClickListener(int x, int y, int button, IGUIItem@ sender)
 {
     if (sender is null) return;
@@ -458,7 +461,7 @@ void scrollerClickListener(int x, int y, int button, IGUIItem@ sender)
 
 }
 
-// TODO: needs a huge rework (this dogshit is unreadable)
+// updates the help frame videos based on the current page and grid size
 void UpdateHelpFrameVideos(Rectangle@ slider, Vec2f grid)
 {
     Label@ parent_title = cast<Label@>(helpFrame.getChild("title"));
@@ -512,19 +515,25 @@ void UpdateHelpFrameVideos(Rectangle@ slider, Vec2f grid)
     }
 }
 
-void createRoomClickListener(int x, int y, int button, IGUIItem@ sender)
+// click callback for loading the chess level
+void loadChessListener(int x, int y, int button, IGUIItem@ sender)
 {
     if (getLocalPlayer() is null) return;
 
     CRules@ rules = getRules();
     if (rules is null) return;
+    if (sender is null) return;
 
-    CBitStream params;
-    params.write_u16(getLocalPlayer().getNetworkID()); // player id
+    Button@ level = cast<Button@>(sender);
+    if (level is null) return;
 
-    rules.SendCommand(rules.getCommandID("create_room"), params);
+    CPlayer@ localPlayer = getLocalPlayer();
+    if (localPlayer is null) return;
+
+    LoadChessLevel(rules, localPlayer.getNetworkID());
 }
 
+// switcher for editor, todo
 void openEditorListener(int x, int y, int button, IGUIItem@ sender)
 {
     if (getLocalPlayer() is null) return;
@@ -537,4 +546,3 @@ void openEditorListener(int x, int y, int button, IGUIItem@ sender)
 
     rules.SendCommand(rules.getCommandID("editor"), params);
 }
-

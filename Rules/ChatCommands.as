@@ -1,24 +1,18 @@
-// in memory of Mirsario
-
 #include "MakeSeed.as";
 #include "MakeCrate.as";
 #include "MakeScroll.as";
 #include "MiscCommon.as";
 #include "BasePNGLoader.as";
 #include "LoadWarPNG.as";
-#include "BannerCommon.as";
 
 const string CHAT_CHANNEL_PROP = "client_channel";
-
 void onInit(CRules@ this)
 {
 	onRestart(this);
-	//this.addCommandID("startInfection");
-	//this.addCommandID("endInfection");
 	this.addCommandID("SendChatMessage");
 
-	if (isClient()) this.set_bool("log",false);//so no clients can get logs unless they do ~logging
-	if (isServer()) this.set_bool("log",true);//server always needs to log anyway
+	if (isClient()) this.set_bool("log", false);//so no clients can get logs unless they do ~logging
+	if (isServer()) this.set_bool("log", true);//server always needs to log anyway
 }
 
 void onRestart(CRules@ this)
@@ -345,90 +339,7 @@ bool onServerProcessChat(CRules@ this,const string& in text_in,string& out text_
 		string[]@ tokens = text_in.split(" ");
 		if (tokens.length > 0)
 		{
-			if (tokens[0] == "!dd") //switch dashboard
-			{
-				printf("set dd");
-				player.set_bool("no_dashboard", true);
-				player.Sync("no_dashboard", true);
-			}
-			else if (tokens[0] == "!ds") //switch killstreak sounds
-			{
-				printf("set ds");
-				player.get_bool("no_ks_sounds") ? player.set_bool("no_ks_sounds", false) : player.set_bool("no_ks_sounds",true);
-				player.Sync("no_ks_sounds", true);
-			}
-			else if (tokens[0] == "!getcarriedlength")
-			{
-				CBlob@ a = player.getBlob();
-				if (a !is null)
-				{
-					CBlob@ b = a.getCarriedBlob();
-					if (b !is null)
-					{
-						printf("length: "+((b.getPosition()-a.getPosition()).getLength()));
-					}
-				}
-			}
-			else if (tokens.length > 1 && tokens[0] == "!meteor")
-			{
-				CBlob@ meteor = server_CreateBlobNoInit("meteor" + tokens[1]);
-				if (tokens.length > 2 && tokens[2] == "sky")
-				{
-					meteor.Tag("spawn_at_sky");
-					Vec2f thispos = blob.getPosition();
-					Vec2f pos = Vec2f(blob.getPosition().x, 0.0f);
-					meteor.setPosition(pos);
-					meteor.Init();
-				}
-				else
-				{
-					meteor.setPosition(blob.getPosition());
-					meteor.Init();
-				}
-
-				return false;
-			}
-			else if (tokens.length > 1 && tokens[0] == "!write") 
-			{
-				if (getGameTime() > this.get_u32("nextwrite"))
-				{
-					if (player.getCoins() >= 50)
-					{
-						string text = "";
-
-						for (int i = 1; i < tokens.length; i++) text += tokens[i] + " ";
-
-						text = text.substr(0, text.length - 1);
-
-						Vec2f dimensions;
-						GUI::GetTextDimensions(text, dimensions);
-
-						if (dimensions.x < 250)
-						{
-
-							CBlob@ paper = server_CreateBlobNoInit("paper");
-							paper.setPosition(blob.getPosition());
-							paper.server_setTeamNum(blob.getTeamNum());
-							paper.set_string("text", text);
-							paper.Init();
-
-							player.server_setCoins(player.getCoins() - 50);
-							this.set_u32("nextwrite", getGameTime() + 100);
-
-							errorMessage = "Written: " + text;
-						}
-						else errorMessage = "Your text is too long, therefore it doesn't fit on the paper.";
-					}
-					else errorMessage = "Not enough coins!";
-				}
-				else
-				{
-					this.set_u32("nextwrite", getGameTime() + 30);
-					errorMessage = "Wait and try again.";
-				}
-				errorColor = SColor(0xff444444);
-			}
-			else if (isMod || isCool)			//For at least moderators
+			if (isMod || isCool)			//For at least moderators
 			{
 				if (tokens[0] == "!wipe")
 				{
@@ -920,6 +831,19 @@ bool onServerProcessChat(CRules@ this,const string& in text_in,string& out text_
 					getMap().SetDayTime(parseFloat(tokens[1]));
 					return false;
 				}
+				else if (tokens[0] == "!msg" ||tokens[0]=="!message") 
+				{
+					for (u8 i = 0; i < getPlayersCount(); i++)
+					{
+						CPlayer@ p = getPlayer(i);
+						if (p !is null)
+						{
+							string text = text_in;
+							text = text.substr(tokens[0] == "!msg" ? 5 : 9, text.size()); // remove !message
+							SetClientMessage(p.getNetworkID(), text);
+						}
+					}
+				}
 				else if (tokens[0]=="!tree") 
 				{
 					if (tokens.length == 2) server_MakeSeed(blob.getPosition(),"tree_"+tokens[1],600,1,16);
@@ -1372,4 +1296,21 @@ void onEnterChat(CRules@ this)
     params.write_u8(getChatChannel());
 	params.write_u16(local.getNetworkID());
     this.SendCommand(this.getCommandID("sync_chat_channel"), params);
+}
+
+void SetClientMessage(u16 pid, string msg)
+{
+    if (!isServer()) return;
+    if (pid == 0) return;
+
+    CRules@ rules = getRules();
+    if (rules is null) return;
+
+    CPlayer@ p = getPlayerByNetworkId(pid);
+    if (p is null) return;
+
+    CBitStream params;
+    params.write_u16(pid);
+    params.write_string(msg);
+    rules.SendCommand(rules.getCommandID("set_client_message"), params, p);
 }

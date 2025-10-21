@@ -751,10 +751,13 @@ class GenericGUIItem : IGUIItem{
 	{
 		string temp = "";
 		GUI::SetFont(font_in);
+
 		Vec2f textDim;
 		float maxWidth = size.x;
+
 		string[]@ tokens = text_in.split(" ");
 		string line = "";
+
 		for (int i = 0; i < tokens.length; i++)
 		{
 			string word = tokens[i];
@@ -789,8 +792,10 @@ class GenericGUIItem : IGUIItem{
 				}
 			}
 		}
+
 		if (line != "")
 			temp += line;
+
 		return temp;
 	}
 }

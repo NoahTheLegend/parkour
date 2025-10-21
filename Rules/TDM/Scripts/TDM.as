@@ -807,7 +807,7 @@ void Reset(CRules@ this)
 	TDMSpawns spawns();
 	TDMCore core(this, spawns);
 	Config(core);
-	core.SetupBases();
+	//core.SetupBases();
 	this.set("core", @core);
 	this.set("start_gametime", getGameTime() + core.warmUpTime);
 	this.set_u32("game_end_time", getGameTime() + core.gameDuration); //for TimeToEnd.as

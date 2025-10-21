@@ -32,14 +32,14 @@ class RoomPNGLoader
 	int current_offset_count;
 	u16 player_id;
 
-	bool lazy_loading = false;
-	uint tiles_per_tick = 0;
+	bool lazy_loading;
+	uint tiles_per_tick;
 	Vec2f lazy_pos;
 	Vec2f lazy_room_size;
 	string lazy_filename;
-	uint lazy_pixel_index = 0;
+	uint lazy_pixel_index;
 	uint[] lazy_placed_tiles;
-	int lazy_top_margin = 0, lazy_bottom_margin = -1, lazy_left_margin = 0, lazy_right_margin = -1;
+	int lazy_top_margin, lazy_bottom_margin, lazy_left_margin, lazy_right_margin;
 	array<Vec2f> lazy_pixels_to_place;
 
 	void startLoading(CMap@ _map, const string& in filename, Vec2f &in pos, Vec2f &in room_size,
@@ -225,6 +225,9 @@ class RoomPNGLoader
 					}
 				}
 
+				// Call onLoad after instant load finishes
+				onLoad();
+				lazy_loading = false;
 				return placed_tiles;
 			}
 
@@ -289,7 +292,16 @@ class RoomPNGLoader
 		CRules@ rules = getRules();
 		if (rules is null) return;
 
-		rules.set("room_loader_" + getPlayerByNetworkId(player_id).getUsername(), null);
+		string id = "server";
+		if (player_id != 0)
+		{
+			CPlayer@ p = getPlayerByNetworkId(player_id);
+			if (p !is null)
+			{
+				id = p.getUsername();
+			}
+		}
+		rules.set("room_loader_" + id, null);
 
 		// set blobs to active
 		CBlob@[] blobs;
@@ -450,8 +462,8 @@ class RoomPNGLoader
 			case map_colors::necromancer_teleport: autotile(offset); AddMarker(map, offset, "necromancer teleport"); break;
 
 			// Main spawns
-			case map_colors::blue_main_spawn:   autotile(offset); AddMarker(map, offset, "blue main spawn"); break;
-			case map_colors::red_main_spawn:    autotile(offset); AddMarker(map, offset, "red main spawn");  break;
+			case map_colors::blue_main_spawn:   autotile(offset); spawnRuins(map, offset, 0); break;
+			case map_colors::red_main_spawn:    autotile(offset); spawnRuins(map, offset, 1); break;
 			case map_colors::green_main_spawn:  autotile(offset); spawnHall(map, offset, 2); break;
 			case map_colors::purple_main_spawn: autotile(offset); spawnHall(map, offset, 3); break;
 			case map_colors::orange_main_spawn: autotile(offset); spawnHall(map, offset, 4); break;
@@ -816,6 +828,12 @@ Vec2f getSpawnPosition(CMap@ map, int offset)
 	pos.x += tile_offset;
 	pos.y += tile_offset;
 	return pos;
+}
+
+CBlob@ spawnRuins(CMap@ map, int offset, u8 team)
+{
+	CBlob@ ruins = spawnBlob(map, 0, "tdm_spawn", offset, team);
+	return @ruins;
 }
 
 CBlob@ spawnHall(CMap@ map, int offset, u8 team)

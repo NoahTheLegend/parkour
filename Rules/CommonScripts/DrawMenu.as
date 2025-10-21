@@ -289,7 +289,7 @@ void InitializeGUI(CRules@ this)
 
 	Label@ subtitle = @Label(Vec2f(8, 26), Vec2f(frameSize.x - 12, 16), "", SColor(255, 0, 0, 0), false, "Terminus_14");
 	subtitle.name = "subtitle";
-	subtitle.setText(subtitle.textWrap("CONTROLS:\n[Build Modifier] - Teleport\n[Mark Player] - Teleport to Anchor\n[Build Modifier] + [Mark Player] - Replace Anchor\n\n* Go to Levels section to create a room, it is located inside the white square.\n\n* Load a level into your room to start.\n\n* You can create and load own levels!\nWrite !editor, !save [name], or !load [name].\n\n* Navigate through the menu for more info.", "Terminus_14"));
+	subtitle.setText(subtitle.textWrap("CONTROLS - check game settings for binding names\n\n[Build Modifier] or  [SHIFT]        - Teleport\n[Mark Player]    or  [R]            - Teleport to Anchor\n[Build Modifier] +   [Mark Player]  - Replace Anchor\n[Left Control]                      - Show pathline\n\n\n* Open the Levels section to create a room, white square will highlight it. You can't create one if all slots are occupied\n\n* Load a level into your room to start\n\n* Navigate through the menu for more info", "Terminus_14"));
 	mainFrame.addChild(subtitle);
 
 	// switchers
@@ -322,7 +322,7 @@ void InitializeGUI(CRules@ this)
 
 	Label@ infoSubtitle = @Label(subtitle.localPosition, subtitle.size, "", SColor(255, 0, 0, 0), false, subtitle.font);
 	infoSubtitle.name = "subtitle";
-	infoSubtitle.setText(infoSubtitle.textWrap("* Each of the official levels is possible to complete.\n\nSome levels, though, require you to know theory and the moveset.\n\n* Watch particular videos in \"Help\" section if you are stuck.\n\n* Tiles and background tiles have different properties for classes, for example, a knight won't be able to slide or slash while inside the background.", subtitle.font));
+	infoSubtitle.setText(infoSubtitle.textWrap("CONTROLS - check game settings for binding names\n\n[Build Modifier] or  [SHIFT]        - Teleport\n[Mark Player]    or  [R]            - Teleport to Anchor\n[Build Modifier] +   [Mark Player]  - Replace Anchor\n[Left Control]                      - Show pathline\n\n\n* Each of the official levels is possible to complete\n\nSome levels, though, require you to know theory and the moveset.\n\n* Watch particular videos in \"Help\" section if you are stuck\n\n* Tiles and background tiles have different properties for classes, for example, a knight won't be able to slide or slash while inside the background", subtitle.font));
 	infoFrame.addChild(infoSubtitle);
 
 	Vec2f scrollerLeftPos = Vec2f(10, 25);
@@ -412,7 +412,7 @@ void InitializeGUI(CRules@ this)
 
 	// KNIGHT
 	Button@ knightLevelsButton = @Button(knightButtonPos, levelsButtonSize, "Knight", SColor(255, 255, 255, 255), "Sakana_14");
-	knightLevelsButton.addClickListener(levelsClickListener);
+	knightLevelsButton.addClickListener(levelsCategoryClickListener);
 	knightLevelsButton.name = "knightLevelsButton";
 	knightLevelsButton.rectColor = SColor(255, 255, 25, 55);
 	levelsWrapper.addChild(knightLevelsButton);
@@ -445,7 +445,7 @@ void InitializeGUI(CRules@ this)
 
 	// ARCHER
 	Button@ archerLevelsButton = @Button(archerButtonPos, levelsButtonSize, "Archer", SColor(255, 255, 255, 255), "Sakana_14");
-	archerLevelsButton.addClickListener(levelsClickListener);
+	archerLevelsButton.addClickListener(levelsCategoryClickListener);
 	archerLevelsButton.name = "archerLevelsButton";
 	archerLevelsButton.rectColor = SColor(255, 155, 25, 55);
 	levelsWrapper.addChild(archerLevelsButton);
@@ -478,7 +478,7 @@ void InitializeGUI(CRules@ this)
 
 	// BUILDER
 	Button@ builderLevelsButton = @Button(builderButtonPos, levelsButtonSize, "Builder", SColor(255, 255, 255, 255), "Sakana_14");
-	builderLevelsButton.addClickListener(levelsClickListener);
+	builderLevelsButton.addClickListener(levelsCategoryClickListener);
 	builderLevelsButton.name = "builderLevelsButton";
 	builderLevelsButton.rectColor = SColor(255, 155, 25, 55);
 	levelsWrapper.addChild(builderLevelsButton);
@@ -511,7 +511,7 @@ void InitializeGUI(CRules@ this)
 
 	// CUSTOM LEVELS (and editor button)
 	Button@ customLevelsButton = @Button(customButtonPos, levelsButtonSize, "Custom", SColor(255, 255, 255, 255), "Sakana_14");
-	customLevelsButton.addClickListener(levelsClickListener);
+	customLevelsButton.addClickListener(levelsCategoryClickListener);
 	customLevelsButton.name = "customLevelsButton";
 	customLevelsButton.rectColor = SColor(255, 155, 25, 55);
 	levelsWrapper.addChild(customLevelsButton);
@@ -602,7 +602,7 @@ void AddSettings(CRules@ this, Rectangle@ settingsFrame)
 	// all settings are on by default
 	// next level swap toggle
 	bool next_level_swap = this.get_bool("next_level_swap");
-	Button@ nextLevelSwapToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Next level swap: " + (next_level_swap ? "ON" : "OFF"), SColor(255, 255, 255, 255));
+	Button@ nextLevelSwapToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Auto next level: " + (next_level_swap ? "YES" : "NO"), SColor(255, 255, 255, 255));
 	nextLevelSwapToggle.name = "nextLevelSwapToggle";
 	nextLevelSwapToggle.selfLabeled = true;
 	nextLevelSwapToggle.rectColor = SColor(255, 255, 115, 55);
@@ -612,8 +612,8 @@ void AddSettings(CRules@ this, Rectangle@ settingsFrame)
 	prevHeight += buttonSize.y + gap;
 	
 	// path line toggle
-	bool path_line = this.get_bool("path_line");
-	Button@ disablePathLineToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Disable path line (WIP): " + (path_line ? "ON" : "OFF"), SColor(255, 255, 255, 255));
+	bool path_line = this.get_bool("enable_pathline");
+	Button@ disablePathLineToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Enable path line: " + (path_line ? "YES" : "NO"), SColor(255, 255, 255, 255));
 	disablePathLineToggle.name = "disablePathLineToggle";
 	disablePathLineToggle.selfLabeled = true;
 	disablePathLineToggle.rectColor = SColor(255, 255, 115, 55);
@@ -624,7 +624,7 @@ void AddSettings(CRules@ this, Rectangle@ settingsFrame)
 
 	// disable movement while menu is open
 	bool disable_movement = this.get_bool("disable_movement");
-	Button@ disableMovementToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Menu disables movement: " + (disable_movement ? "ON" : "OFF"), SColor(255, 255, 255, 255));
+	Button@ disableMovementToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Menu disables movement: " + (disable_movement ? "YES" : "NO"), SColor(255, 255, 255, 255));
 	disableMovementToggle.name = "disableMovementToggle";
 	disableMovementToggle.selfLabeled = true;
 	disableMovementToggle.rectColor = SColor(255, 255, 115, 55);
@@ -635,7 +635,7 @@ void AddSettings(CRules@ this, Rectangle@ settingsFrame)
 
 	// can open menu while moving
 	bool allow_moving_menu = this.get_bool("allow_moving_menu");
-	Button@ allowMovingMenuToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Require stop for menu: " + (allow_moving_menu ? "ON" : "OFF"), SColor(255, 255, 255, 255));
+	Button@ allowMovingMenuToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Require stop for menu: " + (allow_moving_menu ? "YES" : "NO"), SColor(255, 255, 255, 255));
 	allowMovingMenuToggle.name = "allowMovingMenuToggle";
 	allowMovingMenuToggle.selfLabeled = true;
 	allowMovingMenuToggle.rectColor = SColor(255, 255, 115, 55);
@@ -644,15 +644,15 @@ void AddSettings(CRules@ this, Rectangle@ settingsFrame)
 	settingsFrame.addChild(allowMovingMenuToggle);
 	prevHeight += buttonSize.y + gap;
 
-	// instant teleport
-	bool instant_teleport = this.get_bool("instant_teleport");
-	Button@ instantTeleportToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Instant teleport: " + (instant_teleport ? "ON" : "OFF"), SColor(255, 255, 255, 255));
-	instantTeleportToggle.name = "instantTeleportToggle";
-	instantTeleportToggle.selfLabeled = true;
-	instantTeleportToggle.rectColor = SColor(255, 255, 115, 55);
-	instantTeleportToggle.toggled = instant_teleport;
-	instantTeleportToggle.addClickListener(toggleListener);
-	settingsFrame.addChild(instantTeleportToggle);
+	// continuous teleport
+	bool continuous_teleport = this.get_bool("continuous_teleport");
+	Button@ continuousTeleportToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Continuous teleport: " + (continuous_teleport ? "YES" : "NO"), SColor(255, 255, 255, 255));
+	continuousTeleportToggle.name = "continuousTeleportToggle";
+	continuousTeleportToggle.selfLabeled = true;
+	continuousTeleportToggle.rectColor = SColor(255, 255, 115, 55);
+	continuousTeleportToggle.toggled = continuous_teleport;
+	continuousTeleportToggle.addClickListener(toggleListener);
+	settingsFrame.addChild(continuousTeleportToggle);
 	prevHeight += buttonSize.y + gap;
 }
 
@@ -664,15 +664,15 @@ void UpdateSettings(CRules@ this)
 	{
 		bool next_level_swap = nextLevelSwapToggle.toggled;
 		this.set_bool("next_level_swap", next_level_swap);
-		nextLevelSwapToggle.desc = "Next level swap: " + (next_level_swap ? "ON" : "OFF");
+		nextLevelSwapToggle.desc = "Auto next level: " + (next_level_swap ? "YES" : "NO");
 	}
 
 	Button@ disablePathLineToggle = cast<Button@>(settingsFrame.getChild("disablePathLineToggle"));
 	if (disablePathLineToggle !is null)
 	{
 		bool path_line = disablePathLineToggle.toggled;
-		this.set_bool("path_line", path_line);
-		disablePathLineToggle.desc = "Disable path line (WIP): " + (path_line ? "ON" : "OFF");
+		this.set_bool("enable_pathline", path_line);
+		disablePathLineToggle.desc = "Enable path line: " + (path_line ? "YES" : "NO");
 	}
 
 	Button@ disableMovementToggle = cast<Button@>(settingsFrame.getChild("disableMovementToggle"));
@@ -680,7 +680,7 @@ void UpdateSettings(CRules@ this)
 	{
 		bool disable_movement = disableMovementToggle.toggled;
 		this.set_bool("disable_movement", disable_movement);
-		disableMovementToggle.desc = "Menu disables movement: " + (disable_movement ? "ON" : "OFF");
+		disableMovementToggle.desc = "Menu disables movement: " + (disable_movement ? "YES" : "NO");
 	}
 
 	Button@ allowMovingMenuToggle = cast<Button@>(settingsFrame.getChild("allowMovingMenuToggle"));
@@ -688,15 +688,15 @@ void UpdateSettings(CRules@ this)
 	{
 		bool allow_moving_menu = allowMovingMenuToggle.toggled;
 		this.set_bool("allow_moving_menu", allow_moving_menu);
-		allowMovingMenuToggle.desc = "Require stop for menu: " + (allow_moving_menu ? "ON" : "OFF");
+		allowMovingMenuToggle.desc = "Require stop for menu: " + (allow_moving_menu ? "YES" : "NO");
 	}
 
-	Button@ instantTeleportToggle = cast<Button@>(settingsFrame.getChild("instantTeleportToggle"));
-	if (instantTeleportToggle !is null)
+	Button@ continuousTeleportToggle = cast<Button@>(settingsFrame.getChild("continuousTeleportToggle"));
+	if (continuousTeleportToggle !is null)
 	{
-		bool instant_teleport = instantTeleportToggle.toggled;
-		this.set_bool("instant_teleport", instant_teleport);
-		instantTeleportToggle.desc = "Instant teleport: " + (instant_teleport ? "ON" : "OFF");
+		bool continuous_teleport = continuousTeleportToggle.toggled;
+		this.set_bool("continuous_teleport", continuous_teleport);
+		continuousTeleportToggle.desc = "Continuous teleport: " + (continuous_teleport ? "YES" : "NO");
 	}
 }
 
@@ -713,8 +713,8 @@ void setCachedStates(CRules@ this)
 	Button@ disablePathLineToggle = cast<Button@>(settingsFrame.getChild("disablePathLineToggle"));
 	if (disablePathLineToggle !is null)
 	{
-		bool path_line = disablePathLineToggle.getBool("path_line", "parkour_settings");
-		this.set_bool("path_line", path_line);
+		bool path_line = disablePathLineToggle.getBool("enable_pathline", "parkour_settings");
+		this.set_bool("enable_pathline", path_line);
 		disablePathLineToggle.toggled = path_line;
 	}
 
@@ -734,12 +734,12 @@ void setCachedStates(CRules@ this)
 		allowMovingMenuToggle.toggled = allow_moving_menu;
 	}
 
-	Button@ instantTeleportToggle = cast<Button@>(settingsFrame.getChild("instantTeleportToggle"));
-	if (instantTeleportToggle !is null)
+	Button@ continuousTeleportToggle = cast<Button@>(settingsFrame.getChild("continuousTeleportToggle"));
+	if (continuousTeleportToggle !is null)
 	{
-		bool instant_teleport = instantTeleportToggle.getBool("instant_teleport", "parkour_settings");
-		this.set_bool("instant_teleport", instant_teleport);
-		instantTeleportToggle.toggled = instant_teleport;
+		bool continuous_teleport = continuousTeleportToggle.getBool("continuous_teleport", "parkour_settings");
+		this.set_bool("continuous_teleport", continuous_teleport);
+		continuousTeleportToggle.toggled = continuous_teleport;
 	}
 
 	UpdateSettings(this);

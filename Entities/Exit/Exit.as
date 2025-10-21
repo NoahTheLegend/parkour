@@ -48,6 +48,9 @@ void GetButtonsFor(CBlob@ this, CBlob@ caller)
 	CRules@ rules = getRules();
 	if (rules is null) return;
 
+	CPlayer@ p = caller.getPlayer();
+	if (p is null || p.getNetworkID() != this.get_u16("owner_id")) return;
+
 	// check if next level swap is enabled
 	bool next_level_swap = rules.get_bool("next_level_swap");
 	if (next_level_swap) return;
@@ -85,6 +88,9 @@ void onCollision(CBlob@ this, CBlob@ blob, bool solid)
 {
 	if (blob is null) return;
 	if (!blob.hasTag("player")) return;
+
+	CPlayer@ p = blob.getPlayer();
+	if (p is null || p.getNetworkID() != this.get_u16("owner_id")) return;
 
 	CRules@ rules = getRules();
 	if (rules is null) return;

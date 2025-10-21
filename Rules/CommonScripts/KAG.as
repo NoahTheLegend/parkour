@@ -10,6 +10,7 @@ void onInit(CRules@ this)
 	this.addCommandID("create_room");
 	this.addCommandID("sync_room_owners");
 	this.addCommandID("editor");
+	this.addCommandID("set_client_message");
 	
 	LoadDefaultMapLoaders();
 	LoadDefaultGUI();

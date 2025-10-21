@@ -1,6 +1,11 @@
+#include "KGUI.as";
 #include "PNGLoader.as";
 #include "RoomsCommon.as";
+#include "RoomsListeners.as";
 #include "RoomsHandlers.as";
+#include "RoomsHooks.as";
+#include "Helpers.as";
+#include "CommandHandlers.as";
 
 void onInit(CRules@ this)
 {
@@ -11,16 +16,21 @@ void onInit(CRules@ this)
         this.set_u8("captured_room_id", 255); // none
 
         CBitStream params;
-        params.write_bool(true); // request sync
+        params.write_bool(true); // request a sync
         this.SendCommand(this.getCommandID("create_rooms_grid"), params);
     }
 }
 
 void onRestart(CRules@ this)
 {
+    this.Untag("was_init");
+
     // clear current room info
     this.set_u8("current_level_type", 0);
     this.set_s32("current_level_id", -1);
+
+    this.set_string("_client_message", "");
+    this.set_u32("_client_message_time", 0);
 
     this.set_Vec2f("current_room_pos", Vec2f(0,0));
     this.set_Vec2f("current_room_size", Vec2f(0,0));
@@ -38,236 +48,6 @@ void onRestart(CRules@ this)
     u16[] room_owners;
     this.set("room_ids", @room_ids);
     this.set("room_owners", @room_owners);
-
-    CreateRoomsGrid(this);
-}
-
-void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
-{
-    if (cmd == this.getCommandID("create_rooms_grid"))
-    {
-        // if request_sync, client is requesting the grid from server
-        bool request_sync = false;
-        if (!params.saferead_bool(request_sync)) {print("Failed to read request sync"); return;}
-
-        if (request_sync && isServer())
-        {
-            SyncRoomsGrid(this);
-            return;
-        }
-
-        uint rooms_count;
-        if (!params.saferead_u16(rooms_count)) {print("Failed to read rooms count [0]"); return;}
-
-        Vec2f[] room_coords;
-        for (uint i = 0; i < rooms_count; i++)
-        {
-            Vec2f room_pos;
-            if (!params.saferead_Vec2f(room_pos)) {print("Failed to read room pos"); return;}
-            room_coords.push_back(room_pos);
-        }
-
-        CreateRoomsGrid(this, room_coords);
-        print("Received rooms grid with " + room_coords.length + " rooms");
-
-        return;
-    }
-    else if (cmd == this.getCommandID("set_room"))
-    {
-        u16 pid;
-        if (!params.saferead_u16(pid)) {print("Failed to read player id"); return;}
-
-        CPlayer@ p = getPlayerByNetworkId(pid);
-        if (p is null) return;
-
-        string user_call = "last_room_set_time_" + p.getUsername();
-        if (this.exists(user_call) && getGameTime() - this.get_u32(user_call) < base_room_set_delay)
-        {
-            print("Ignoring rapid room set request from " + p.getUsername());
-            return;
-        }
-        this.set_u32(user_call, getGameTime());
-
-        u8 level_type;
-        if (!params.saferead_u8(level_type)) {print("Failed to read room type"); return;}
-
-        int level_id;
-        if (!params.saferead_s32(level_id)) {print("Failed to read level id"); return;}
-
-        Vec2f room_size;
-        if (!params.saferead_Vec2f(room_size)) {print("Failed to read room size"); return;}
-
-        Vec2f start_pos;
-        if (!params.saferead_Vec2f(start_pos)) {print("Failed to read start pos"); return;}
-
-        print("Loaded level " + level_id + " of type " + level_type + " with size " + room_size + " at pos " + start_pos);
-
-        // set client vars
-        if (p.isMyPlayer())
-        {
-            this.set_u8("current_level_type", level_type);
-            this.set_s32("current_level_id", level_id);
-
-            this.set_Vec2f("current_room_pos", start_pos);
-            this.set_Vec2f("current_room_size", room_size);
-            this.set_Vec2f("current_room_center", start_pos + room_size * 0.5f);
-
-            error("Client: set current room to " + level_id + " of type " + level_type + " at pos " + start_pos);
-        }
-
-        string file = level_type == RoomType::chess ? "ChessLevel.png" : GetRoomFile(level_type, level_id);
-        CFileImage fm(file);
-        if (!fm.isLoaded())
-        {
-            print("Room file " + file + " not found, loading empty room");
-            file = "Maps/Hub.png";
-        }
-
-        EraseRoom(this, start_pos, room_size); // tag for room creation
-        CreateRoomFromFile(this, file, start_pos, pid);
-        onRoomCreated(this, level_type, level_id, pid);
-    }
-    else if (cmd == this.getCommandID("create_room"))
-    {
-        if (!isServer()) return;
-
-        u16 pid;
-        if (!params.saferead_u16(pid)) {print("Failed to read player id"); return;}
-
-        CPlayer@ p = getPlayerByNetworkId(pid);
-        if (p is null) return;
-        
-        u8[]@ room_ids;
-        if (!this.get("room_ids", @room_ids)) {print("Failed to get room ids"); return;}
-
-        u16[]@ room_owners;
-        if (!this.get("room_owners", @room_owners)) {print("Failed to get room owners"); return;}
-
-        if (room_ids is null || room_owners is null)
-        {
-            print("Room ids or owners not found");
-            return;
-        }
-
-        if (room_ids.length != room_owners.length)
-        {
-            print("Room ids and owners length mismatch");
-            return;
-        }
-
-        u8 free_room_id = 255;
-        // check if we own one already and set that one instead
-        for (uint i = 0; i < room_ids.size(); i++)
-        {
-            if (room_owners[i] == pid) // already owned
-            {
-                print("Player " + p.getUsername() + " already owns room id " + room_ids[i]);
-                free_room_id = room_ids[i];
-                break;
-            }
-        }
-
-        if (free_room_id == 255)
-        {
-            // find a free room to claim
-            for (uint i = 0; i < room_ids.size(); i++)
-            {
-                if (room_owners[i] == 0) // unowned
-                {
-                    //free_room_id = room_ids[i];
-                    //room_owners[i] = pid; // claim ownership
-                    break;
-                }
-            }
-            free_room_id = XORRandom(6);
-            room_owners[free_room_id] = pid; // claim ownership
-        }
-        
-        CBitStream params1;
-        params1.write_u16(pid);
-        params1.write_u8(free_room_id);
-        params1.write_u8(room_ids.size());
-        for (uint i = 0; i < room_ids.size(); i++)
-        {
-            params1.write_u8(room_ids[i]);
-            params1.write_u16(room_owners[i]);
-        }
-        this.SendCommand(this.getCommandID("sync_room_owners"), params1);
-    }
-    else if (cmd == this.getCommandID("sync_room_owners"))
-    {
-        if (!isClient()) return;
-
-        u16 pid;
-        if (!params.saferead_u16(pid)) {print("Failed to read player id"); return;}
-
-        u8 free_room_id;
-        if (!params.saferead_u8(free_room_id)) {print("Failed to read free room id"); return;}
-
-        u8 rooms_count;
-        if (!params.saferead_u8(rooms_count)) {print("Failed to read rooms count [1]"); return;}
-
-        u8[] room_ids;
-        u16[] room_owners;
-
-        for (uint i = 0; i < rooms_count; i++)
-        {
-            u8 room_id;
-            if (!params.saferead_u8(room_id)) {print("Failed to read room id"); return;}
-            room_ids.push_back(room_id);
-
-            u16 owner_id;
-            if (!params.saferead_u16(owner_id)) {print("Failed to read room owner id"); return;}
-            room_owners.push_back(owner_id);
-        }
-
-        print("Synced room owners with " + rooms_count + " rooms count, " + room_ids.length + " room ids and " + room_owners.length + " owners");
-        
-        this.set("room_ids", @room_ids);
-        this.set("room_owners", @room_owners);
-
-        CPlayer@ p = getPlayerByNetworkId(pid);
-        if (p !is null)
-        {
-            print("Player " + p.getUsername() + " assigned room id " + free_room_id);
-            this.set_u8("captured_room_id", free_room_id);
-            error("now id "+this.get_u8("captured_room_id"));
-        }
-    }
-    else if (cmd == this.getCommandID("editor"))
-    {
-        u16 pid;
-        if (!params.saferead_u16(pid)) {print("Failed to read player id"); return;}
-
-        CPlayer@ p = getPlayerByNetworkId(pid);
-        if (p is null) return;
-
-        CRules@ rules = getRules();
-        if (rules is null) return;
-
-        bool is_editor = rules.get_bool("editor_mode_" + pid);
-        rules.set_bool("editor_mode_" + pid, !is_editor);
-    }
-}
-
-void onRoomCreated(CRules@ this, u8 level_type, uint level_id, u16 pid)
-{
-    CPlayer@ p = getPlayerByNetworkId(pid);
-    if (p is null) return;
-
-    CBlob@ player_blob = p.getBlob();
-    string new_blob_name = level_type == RoomType::builder ? "builder" : level_type == RoomType::archer ? "archer" : "knight";
-    
-    CBlob@[] bs;
-    getBlobsByTag("owner_tag_" + pid, @bs);
-
-    CBlob@ target = bs.length > 0 ? bs[0] : null;
-    Vec2f pos = target !is null ? target.getPosition() : player_blob !is null ? player_blob.getPosition() : Vec2f(0, 0);
-
-    if (player_blob !is null && player_blob.getName() == new_blob_name) return; // already correct class
-    CBlob@ new_blob = server_CreateBlob(new_blob_name, p.getTeamNum(), pos);
-    if (new_blob !is null) new_blob.server_SetPlayer(p);
-    if (player_blob !is null) player_blob.server_Die();
 }
 
 void onReload(CRules@ this)
@@ -279,72 +59,64 @@ void onReload(CRules@ this)
     }
 }
 
-void CreateRoomsGrid(CRules@ this, Vec2f[] override_room_coords = Vec2f[]())
+void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
 {
-    // create both on client and server
-    CMap@ map = getMap();
-    if (map is null) return;
-
-    Vec2f[] room_coords;
-    u8[] room_ids;
-    u16[] room_owners;
-
-    if (override_room_coords.length() > 0)
+    if (cmd == this.getCommandID("create_rooms_grid"))
     {
-        room_coords = override_room_coords;
+        CreateRoomsGridCommand(this, params);
     }
-    else
+    else if (cmd == this.getCommandID("set_room"))
     {
-        int map_width = map.tilemapwidth * 8;
-        int map_height = map.tilemapheight * 8;
-
-        int cols = map_width / ROOM_SIZE.x;
-        int rows = map_height / ROOM_SIZE.y;
-
-        print("Creating rooms grid for map size " + map_width + "x" + map_height +" and room size " + ROOM_SIZE.x + "x" + ROOM_SIZE.y + " (" + cols + "x" + rows + ")");
-
-        u8 rooms_count = u8(cols * rows);
-        u8 middle_hub_id = u8(Maths::Floor(rooms_count / 2.0f));
-
-        // iterate row-major: y (rows) outer, x (cols) inner
-        for (int ry = 0; ry < rows; ry++)
-        {
-            for (int cx = 0; cx < cols; cx++)
-            {
-                int x = cx * ROOM_SIZE.x;
-                int y = ry * ROOM_SIZE.y;
-
-                u8 room_index = u8(ry * cols + cx);
-
-                if (room_index == middle_hub_id)
-                {
-                    // load chess level here
-                    print("Loading chess level at room index " + room_index + " pos (" + x + ", " + y + ")");
-                    LoadChessLevel(this, Vec2f(x, y));
-                    continue;
-                }
-
-                room_coords.push_back(Vec2f(x, y));
-                room_ids.push_back(room_ids.length);
-                room_owners.push_back(0); // no owner yet
-            }
-        }
+        SetRoomCommand(this, params);
+        UpdatePathlineData(this);
     }
+    else if (cmd == this.getCommandID("create_room"))
+    {
+        CreateRoomCommand(this, params);
+        UpdatePathlineData(this);
+    }
+    else if (cmd == this.getCommandID("sync_room_owners"))
+    {
+        SyncRoomOwnerCommand(this, params);
+    }
+    else if (cmd == this.getCommandID("editor"))
+    {
+        UpdatePathlineData(this);
 
-    print("Created rooms grid with " + room_coords.length + " rooms, " + room_ids.length + " ids, " + room_owners.length + " owners");
+        // todo, wip
+        u16 pid;
+        if (!params.saferead_u16(pid)) {print("[CMD] Failed to read player id"); return;}
 
-    @local_room_coords = @room_coords;
-    this.set("room_coords", room_coords);
+        CPlayer@ p = getPlayerByNetworkId(pid);
+        if (p is null) return;
 
-    this.set("room_ids", @room_ids);
-    this.set("room_owners", @room_owners);
+        CRules@ rules = getRules();
+        if (rules is null) return;
+
+        bool is_editor = rules.get_bool("editor_mode_" + pid);
+        rules.set_bool("editor_mode_" + pid, !is_editor);
+
+        SetClientMessage(pid, "Editor hasn't been done yet. This was kept as a placeholder.");
+    }
+    else if (cmd == this.getCommandID("set_client_message"))
+    {
+        ClientMessageCommand(this, params);
+    }
 }
 
-Vec2f[]@ local_room_coords;
+bool cfg_loaded = false;
+ConfigFile@ pathline_cfg = @ConfigFile();
+string[] positions_str;
+
 void onRender(CRules@ this)
 {
     if (!isClient()) return;
+    GUI::SetFont("menu");
+
     u8 room_id = this.get_u8("captured_room_id");
+    RenderMessages(this);
+
+    string pathline_key = this.exists("pathline_key") ? this.get_string("pathline_key") : "";
 
     if (local_room_coords !is null)
     {
@@ -370,20 +142,14 @@ void onRender(CRules@ this)
         }
     }
 
-    if (pathline_test)
+    if (debug_test)
     {
         f32 y = 200.0f;
-
-        string key = this.get_string("pathline_key");
-        ConfigFile cfg;
-        string[] positions_str;
-        bool cfg_loaded = cfg.loadFile("../Cache/parkour_pathlines.cfg");
-        cfg.readIntoArray_string(positions_str, key);
 
         string recording = this.get_bool("recording_pathline") ? "ON" : "OFF";
         GUI::DrawText("Pathline recording: " + recording, Vec2f(100, y), SColor(255, 255, 255, 0));
 
-        GUI::DrawText("Pathline key: " + key, Vec2f(100, y + 20), SColor(255, 255, 255, 0));
+        GUI::DrawText("Pathline key: " + pathline_key, Vec2f(100, y + 20), SColor(255, 255, 255, 0));
 
         string pathline_state = this.get_u8("test_pathline_state") == 0 ? "HIDDEN" : "SHOWING";
         GUI::DrawText("Pathline test state: " + pathline_state, Vec2f(100, y + 40), SColor(255, 255, 255, 0));
@@ -436,7 +202,6 @@ void onRender(CRules@ this)
         u16[]@ room_owners;
         if (!this.get("room_owners", @room_owners)) return;
 
-        //print("Rendering " + room_ids.length + " room ids and owners");
         for (uint i = 0; i < room_ids.size(); i++)
         {
             Vec2f room_pos = local_room_coords[i];
@@ -467,94 +232,74 @@ void onRender(CRules@ this)
     }
 }
 
-void EnsureRoomsOwned(CRules@ this)
+void RenderMessages(CRules@ this)
 {
-    if (!isServer()) return;
     u32 gt = getGameTime();
 
-    u8[]@ room_ids;
-    if (!this.get("room_ids", @room_ids))
+    // client message
+    u32 msg_time = this.get_u32("_client_message_time");
+    string msg = this.get_string("_client_message");
+    Vec2f pane_size = this.get_Vec2f("_client_message_size");
+    if (msg_time != 0)
     {
-        if (gt % 30 == 0) error("EnsureRoomsOwned: failed to get room_ids");
-        return;
-    }
+        f32 ft = 10.0f;
+        f32 kt = 90.0f + msg.size() * 3;
+        f32 et = 10.0f;
 
-    u16[]@ room_owners;
-    if (!this.get("room_owners", @room_owners))
-    {
-        if (gt % 30 == 0) error("EnsureRoomsOwned: failed to get room_owners");
-        return;
-    }
-
-    for (uint i = 0; i < room_ids.length; i++)
-    {
-        u16 owner_id = room_owners[i];
-        if (owner_id != 0) // unowned
+        int diff = gt - msg_time;
+        f32 fade = diff < ft ? diff / ft : diff < ft + kt ? 1.0f : 1.0f - Maths::Clamp((diff - ft - kt) / et, 0.0f, 1.0f);
+        if (diff >= ft + kt + et)
         {
-            CPlayer@ owner_player = getPlayerByNetworkId(owner_id);
-            if (owner_player is null)
-            {
-                // owner disconnected, free the room
-                room_owners[i] = 0;
-                if (gt % 30 == 0) print("Room " + i + " owner disconnected, freeing room");
-            }
+            this.set_u32("_client_message_time", 0);
+            this.set_string("_client_message", "");
+            this.set_Vec2f("_client_message_size", Vec2f(0,0));
         }
+
+        string font = "Terminus_14";
+        GUI::SetFont(font);
+
+        Vec2f screen_size = getDriver().getScreenDimensions();
+        Vec2f extra = Vec2f(6, 6);
+
+        f32 offset = fade * (pane_size.y + 8 + extra.y * 2);
+        Vec2f pane_pos = Vec2f(screen_size.x - pane_size.x - 8 - extra.x, -pane_size.y - 8 + offset);
+
+        GUI::DrawPane(pane_pos - extra, pane_pos + pane_size + extra, SColor(fade * 255, 75, 125, 235));
+        GUI::DrawText(msg, pane_pos - Vec2f(1, 1), SColor(fade * 255, 255, 255, 255));
     }
 }
 
-const f32 MAX_POS = 20000.0f; // maximum absolute coordinate value
-string[] cached_positions; // packed player path data as strings
-bool pathline_test = true;
-
+bool debug_test = true;
 void onTick(CRules@ this)
 {
+    if (!this.hasTag("was_init")) CreateRoomsGrid(this);
+    if (!cfg_loaded) UpdatePathlineData(this);
+
     CMap@ map = getMap();
     if (map is null) return;
     if (!isServer()) return;
 
     EnsureRoomsOwned(this);
+    RunRoomLoaders(this);
 
-    // update room loaders
-    for (u8 i = 0; i < getPlayersCount(); i++)
-    {
-        CPlayer@ p = getPlayer(i);
-        if (p is null) continue;
+    string pathline_key = this.exists("pathline_key") ? this.get_string("pathline_key") : "";
 
-        string username = p.getUsername();
-        RoomPNGLoader@ loader;
-        if (this.get("room_loader_" + username, @loader))
-        {
-            if (loader !is null)
-                loader.loadRoom();
-        }
-    }
-
-    // developer localhost only
+    // developer localhost only, todo
     if (isClient() && isServer())
     {
         CControls@ controls = getControls();
         if (controls is null) return;
 
-        string pathline_key = "_p_" + this.get_u8("current_level_type") + "_" + this.get_s32("current_level_id");
-        this.set_string("pathline_key", pathline_key);
-
-        ConfigFile cfg;
-        if (!cfg.loadFile("../Cache/parkour_pathlines.cfg"))
-        {
-            cfg.saveFile("../Cache/parkour_pathlines.cfg");
-        }
-        cfg.loadFile("../Cache/parkour_pathlines.cfg");
-
         u8 pathline_state = this.get_u8("test_pathline_state");
         u32 start_time = this.get_u32("test_pathline_start_time");
         bool recording_pathline = this.get_bool("recording_pathline");
 
-        // toggle display/record mode
-        if (controls.isKeyJustPressed(KEY_LCONTROL))
+        bool show_pathline = this.get_bool("enable_pathline");
+        if (show_pathline)
         {
-            Sound::Play("ButtonClick.ogg");
-            pathline_state = (pathline_state + 1) % 2;
-            start_time = getGameTime();
+            // display
+            if (controls.isKeyJustPressed(KEY_LCONTROL)) start_time = getGameTime();
+            pathline_state = controls.isKeyPressed(KEY_LCONTROL) ? 1 : 0;
         }
 
         // toggle record on/off
@@ -588,18 +333,15 @@ void onTick(CRules@ this)
             player_pos = rpos;
             player_old_pos = rold;
 
-            if (player_pos != player_old_pos)
+            if (player_pos != player_old_pos || pblob.isKeyPressed(key_left) || pblob.isKeyPressed(key_right))
             {
                 u32 packed = PackVec2f(player_pos);
-                cached_positions.push_back("" + packed); // store as string for ConfigFile
+                cached_positions.push_back("" + packed); // store as string for config
             }
         }
         // replay recorded path
         else if (pathline_state == 1)
         {
-            string[] positions_str;
-            cfg.readIntoArray_string(positions_str, pathline_key);
-
             int diff = getGameTime() - start_time;
             if (positions_str.length <= 0) return;
             
@@ -637,15 +379,15 @@ void onTick(CRules@ this)
                         f32 t = quantity > 1 ? f32(i) / f32(quantity - 1) : 0.0f;
                         Vec2f interp = has_old ? oldpos + (pos - oldpos) * t : pos;
                         interp += offset;
-                        int time = 15;
+                        int time = 60;
 
                         CParticle@ p = ParticleAnimated("PathlineCursor.png", interp, Vec2f(0,0), 0, 0, time, 0.0f, true);
                         if (p !is null)
                         {
                             p.gravity = Vec2f(0, 0);
-                            p.scale = 0.5f;
+                            p.scale = 0.75f;
                             p.timeout = time;
-                            p.growth = -0.1f;
+                            p.growth = -0.05f;
                             p.deadeffect = -1;
                             p.collides = false;
 
@@ -663,16 +405,17 @@ void onTick(CRules@ this)
 
         // save when recording stops
         bool stopped_recording = !recording_pathline && this.get_bool("recording_pathline");
-        if (stopped_recording)
+        if (stopped_recording && cached_positions.length > 0)
         {
-            string[] to_save = cached_positions;
-            if (cfg.exists(pathline_key)) cfg.remove(pathline_key); // clear old data
-            cfg.addArray_string(pathline_key, to_save);
+            if (pathline_cfg.exists(pathline_key)) pathline_cfg.remove(pathline_key);
+            pathline_cfg.addArray_string(pathline_key, cached_positions);
+            pathline_cfg.saveFile("parkour_pathlines.cfg");
 
-            cfg.saveFile("parkour_pathlines.cfg");
+            print("[INF] Saved pathline with " + cached_positions.length + " positions to key " + pathline_key);
             cached_positions.clear();
-
-            print("Saved pathline with " + to_save.length + " positions to key " + pathline_key);
+            
+            // update cfg_loaded and pathline_key, then set positions_str
+            UpdatePathlineData(this);
         }
 
         this.set_u8("test_pathline_state", pathline_state);
@@ -681,34 +424,23 @@ void onTick(CRules@ this)
     }
 }
 
-// encode single coordinate (-MAX_POS..+MAX_POS) to u16 (0..65535)
-u16 EncodeCoord(f32 value)
+void UpdatePathlineData(CRules@ this)
 {
-    if (value < -MAX_POS) value = -MAX_POS;
-    if (value >  MAX_POS) value =  MAX_POS;
-    f32 norm = (value + MAX_POS) / (2.0f * MAX_POS);
-    return u16(Maths::Round(norm * 65535.0f));
-}
+    string pathline_key = "_p_" + this.get_u8("current_level_type") + "_" + this.get_s32("current_level_id");
+    this.set_string("pathline_key", pathline_key);
 
-// decode u16 (0..65535) back to coordinate (-MAX_POS..+MAX_POS)
-f32 DecodeCoord(u16 encoded)
-{
-    f32 norm = f32(encoded) / 65535.0f;
-    return norm * (2.0f * MAX_POS) - MAX_POS;
-}
+    if (pathline_cfg is null)
+    {
+        @pathline_cfg = @ConfigFile();
+        warn("[WRN] Client: pathline_cfg was null, recreated");
+    }
 
-// pack Vec2f into u32 (16 bits x, 16 bits y)
-u32 PackVec2f(const Vec2f &in pos)
-{
-    u16 ex = EncodeCoord(pos.x);
-    u16 ey = EncodeCoord(pos.y);
-    return (u32(ex) << 16) | u32(ey);
-}
+    ConfigFile@ empty = @ConfigFile();
+    @pathline_cfg = @empty;
 
-// unpack u32 back to Vec2f
-Vec2f UnpackVec2f(u32 packed)
-{
-    u16 ex = u16((packed >> 16) & 0xFFFF);
-    u16 ey = u16(packed & 0xFFFF);
-    return Vec2f(DecodeCoord(ex), DecodeCoord(ey));
+    cfg_loaded = pathline_cfg.loadFile("../Cache/parkour_pathlines.cfg");
+    positions_str.clear();
+
+    pathline_cfg.readIntoArray_string(positions_str, pathline_key);
+    print("[INF] Client: updated pathline data for key " + pathline_key + " with " + positions_str.length + " positions, new size: " + positions_str.length);
 }
