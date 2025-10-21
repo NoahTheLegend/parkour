@@ -138,7 +138,7 @@ void EraseRoom(CRules@ this, Vec2f pos, Vec2f size)
     for (uint i = 0; i < blobs.length; i++)
     {
         CBlob@ b = blobs[i];
-        if (b !is null && !b.hasTag("player") && b.getName() != "tdm_spawn") // don't delete players
+        if (b !is null && !b.hasTag("player")) // don't delete players
         {
             b.Untag("exploding");
             b.Tag("dead");
@@ -146,45 +146,49 @@ void EraseRoom(CRules@ this, Vec2f pos, Vec2f size)
         }
     }
 
-    print("[INF] Erased room at " + pos + " with size " + size + ", cleared " + blobs.length + " blobs");
-
-    bool removed = true;
-    while (removed)
-    {
-        removed = false;
-        for (f32 x = pos.x; x < pos.x + size.x; x += map.tilesize)
-        {
-            for (f32 y = pos.y; y < pos.y + size.y; y += map.tilesize)
-            {
-                Vec2f tilePos(x, y);
-                Tile tile = map.getTile(tilePos);
-                for (uint i = 0; i < collapseable_tiles.length; i++)
-                {
-                    if (tile.type == collapseable_tiles[i] && hasSupport(tilePos))
-                    {
-                        map.server_SetTile(tilePos, CMap::tile_ground_back);
-                        removed = true;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    // erase remaining tiles
+    // erase water
     for (f32 x = pos.x; x < pos.x + size.x; x += map.tilesize)
     {
         for (f32 y = pos.y; y < pos.y + size.y; y += map.tilesize)
         {
-            Tile tile = map.getTile(Vec2f(x, y));
-            if (tile.type != CMap::tile_empty)
-            {
-                map.server_SetTile(Vec2f(x, y), CMap::tile_empty);
-            }
-
             map.server_setFloodWaterWorldspace(Vec2f(x, y), false);
         }
     }
+
+    // erase cached tiles
+    string pos_str = int(pos.x) + "_" + int(pos.y);
+    u32[]@ offsets;
+
+    if (this.get("_room_tile_offsets_" + pos_str, @offsets))
+    {
+        // cache tile world positions and mark which were replaced with filler
+        Vec2f[] tile_positions;
+        tile_positions.reserve(offsets.length);
+
+        for (uint i = 0; i < offsets.length; i++)
+        {
+            Vec2f tpos = map.getTileWorldPosition(offsets[i]);
+            tile_positions.push_back(tpos);
+
+            TileType tile = map.getTile(tpos).type;
+            if (collapseable_tiles.find(tile) != -1)
+            {
+                // first pass: only replace collapsable tiles with filler
+                map.server_SetTile(tpos, CMap::filler_tile);
+            }
+        }
+
+        // second pass: replace all remaining cached tiles with empty
+        for (uint i = 0; i < tile_positions.length; i++)
+        {
+            map.server_SetTile(tile_positions[i], CMap::tile_empty);
+        }
+    }
+
+    u32[] empty;
+    this.set("_room_tile_offsets_" + pos_str, @empty);
+
+    print("[INF] Erased room at " + pos + " with size " + size + ", cleared " + blobs.length + " blobs");
 }
 
 // creates a room from a PNG file at the specified position for the specified player

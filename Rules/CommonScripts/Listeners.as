@@ -175,6 +175,11 @@ void toggleListener(int x, int y, int button, IGUIItem@ sender)
         btn.toggled = !btn.toggled;
         btn.saveBool("continuous_teleport", btn.toggled, "parkour_settings");
     }
+    else if (name == "closeOnRoomSelectToggle")
+    {
+        btn.toggled = !btn.toggled;
+        btn.saveBool("close_on_room_select", btn.toggled, "parkour_settings");
+    }
 
     CRules@ rules = getRules();
     if (rules is null) return;
@@ -275,7 +280,11 @@ void UpdateLevels(Rectangle@ slider, Vec2f grid)
 
     int showing_page = slider._customData;
     int showing_count = int(grid.x * grid.y);
-    Vec2f starting_position = Vec2f(64, -40);
+
+    // padding from slider edges for the whole grid area
+    Vec2f padding = Vec2f(12, -24);
+    Vec2f area_start = Vec2f(padding.x * (1.0f + 1.0f / grid.x), 24);
+    Vec2f area_size = slider.size - padding;
 
     // hide all children first
     for (uint i = 0; i < slider.children.size(); i++)
@@ -285,53 +294,13 @@ void UpdateLevels(Rectangle@ slider, Vec2f grid)
         child.isEnabled = false;
     }
 
-    // prepare row/column sizes
-    array<float> col_widths(int(grid.x), 0.0f);
-    array<float> row_heights(int(grid.y), 0.0f);
+    if (area_size.x <= 0.0f || area_size.y <= 0.0f) return;
 
-    const f32 offsetx = 40.0f;
-    const f32 offsety = 140.0f;
+    // compute equal cells (space-between style) and center each child in its cell
+    float cell_w = area_size.x / grid.x;
+    float cell_h = area_size.y / grid.y;
 
-    // calculate max width/height per column/row
-    for (uint i = 0; i < showing_count; i++)
-    {
-        uint index = i + (showing_page * showing_count);
-        if (index >= slider.children.size()) break;
-
-        Rectangle@ child = cast<Rectangle@>(slider.children[index]);
-        if (child is null) continue;
-
-        Icon@ icon = cast<Icon@>(child.getChild("icon"));
-        Vec2f icon_size = child.size;
-        if (icon !is null)
-        {
-            icon_size = icon.size;
-        }
-
-        int col = i % int(grid.x);
-        int row = i / int(grid.x); // FIXED: use grid.x for columns, grid.y for rows
-
-        if (icon_size.x > col_widths[col]) col_widths[col] = icon_size.x;
-        if (icon_size.y > row_heights[row]) row_heights[row] = icon_size.y;
-    }
-
-    // calculate max allowed gap so total width/height does not exceed parent size
-    float max_gap_x = 0.0f;
-    float max_gap_y = 0.0f;
-    if (col_widths.size() > 1)
-    {
-        float total_width = sum(col_widths);
-        float available_width = slider.size.x - starting_position.x * 2 - offsetx;
-        max_gap_x = Maths::Max(0.0f, (available_width - total_width) / (col_widths.size() - 1));
-    }
-    if (row_heights.size() > 1)
-    {
-        float total_height = sum(row_heights);
-        float available_height = slider.size.y - starting_position.y * 2 - offsety;
-        max_gap_y = Maths::Max(0.0f, (available_height - total_height) / (row_heights.size() - 1));
-    }
-
-    // position and enable children with limited gaps
+    // position and enable children
     for (uint i = 0; i < showing_count; i++)
     {
         uint index = i + (showing_page * showing_count);
@@ -343,29 +312,42 @@ void UpdateLevels(Rectangle@ slider, Vec2f grid)
         int col = i % int(grid.x);
         int row = i / int(grid.x);
 
-        float x = 0.0f;
-        for (int c = 0; c < col; c++)
-            x += col_widths[c] + max_gap_x;
+        // center child inside its cell
+        float x = area_start.x + col * cell_w + (cell_w - child.size.x) * 0.5f;
+        float y = area_start.y + row * cell_h + (cell_h - child.size.y) * 0.5f;
 
-        float y = 0.0f;
-        for (int r = 0; r < row; r++)
-            y += row_heights[r] + max_gap_y;
+        // clamp to slider interior to avoid overflow
+        x = Maths::Clamp(x, padding.x, slider.size.x - padding.x - child.size.x);
+        y = Maths::Clamp(y, padding.y, slider.size.y - padding.y - child.size.y);
 
-        Vec2f pos = starting_position + Vec2f(x, y);
-        Vec2f new_size = Vec2f(col_widths[col], row_heights[row]);
+        Vec2f pos = Vec2f(x, y);
 
         child.setPosition(pos);
         child.isEnabled = true;
 
+        Icon@ icon = cast<Icon@>(child.getChild("icon"));
+        if (icon !is null)
+        {
+            f32 icon_scale = icon.scale;
+            float ix = (icon.size.x * icon_scale - child.size.x) / 2.0f;
+            float iy = (icon.size.y * icon_scale - child.size.y) / 2.0f;
+            icon.setPosition(Vec2f(ix, iy) - icon.size / 2);
+        }
+
+        // place text pane below the child, centered
         Button@ text_pane = cast<Button@>(child.getChild("text_pane"));
         if (text_pane !is null)
         {
-            text_pane.setPosition(Vec2f((child.size.x - text_pane.size.x) / 2, new_size.y + text_pane.size.y * 2));
+            Vec2f middle_bottom = Vec2f(
+                child.size.x / 2 - text_pane.size.x / 2,
+                child.size.y + 4
+            );
+            text_pane.setPosition(middle_bottom);
         }
 
         if (debug_levels_bg)
         {
-            int shade = Maths::Clamp(255 - i * 5, 0, 255);
+            int shade = Maths::Clamp(255 - int(i) * 5, 0, 255);
             child.color = SColor(255, shade, shade, shade);
         }
     }
@@ -420,11 +402,20 @@ void levelHoverListener(bool is_over, IGUIItem@ sender)
     {
         icon.color.set(255, 215, 215, 215);
         text_pane.rectColor = SColor(255, 215, 0, 0);
+
+        hovering_filename = level.name;
+        hovering_size = icon.size;
     }
     else
     {
         icon.color.set(255, 255, 255, 255);
         text_pane.rectColor = SColor(255, 255, 0, 0);
+
+        if (hovering_filename == level.name)
+        {
+            hovering_filename = "";
+            hovering_size = Vec2f_zero;
+        }
     }
 }
 

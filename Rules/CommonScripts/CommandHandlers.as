@@ -138,13 +138,11 @@ void CreateRoomCommand(CRules@ this, CBitStream@ params)
         {
             if (room_owners[i] == 0) // unowned
             {
-                //free_room_id = room_ids[i];
-                //room_owners[i] = pid; // claim ownership
+                free_room_id = room_ids[i];
+                room_owners[i] = pid; // claim ownership
                 break;
             }
         }
-        free_room_id = XORRandom(6);
-        room_owners[free_room_id] = pid; // claim ownership
     }
     
     CBitStream params1;
@@ -195,7 +193,7 @@ void SyncRoomOwnerCommand(CRules@ this, CBitStream@ params)
     CPlayer@ p = getPlayerByNetworkId(pid);
     if (p !is null)
     {
-        print("[INF] Player " + p.getUsername() + " assigned room id " + free_room_id);
+        warn("[INF] Player " + p.getUsername() + " assigned room id " + free_room_id);
         this.set_u8("captured_room_id", free_room_id);
     }
 }

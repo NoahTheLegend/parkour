@@ -61,7 +61,6 @@ class RoomPNGLoader
 		lazy_right_margin = -1;
 
 		@image = CFileImage(filename);
-
 		if (image.isLoaded())
 		{
 			// First pass: find boundaries and collect pixels to place
@@ -209,7 +208,9 @@ class RoomPNGLoader
 					}
 
 					SColor col = (idx != -1) ? colors[idx] : SColor();
-					handlePixel(col, lazy_pos + pos * map.tilesize + margin);
+					Vec2f last_pos = lazy_pos + pos * map.tilesize + margin;
+
+					handlePixel(col, last_pos);
 					placed_tiles.push_back(map.getTileOffset(lazy_pos + pos * map.tilesize));
 				}
 
@@ -255,14 +256,20 @@ class RoomPNGLoader
 			{
 				Vec2f pixel_pos = lazy_pixels_to_place[lazy_pixel_index];
 				image.setPixelPosition(pixel_pos);
-				const SColor pixel = image.readPixel();
 
-				handlePixel(pixel, lazy_pos + pixel_pos * map.tilesize + margin);
-				lazy_placed_tiles.push_back(map.getTileOffset(lazy_pos + pixel_pos * map.tilesize));
+				const SColor pixel = image.readPixel();
+				Vec2f last_pos = lazy_pos + pixel_pos * map.tilesize + margin;
+
+				handlePixel(pixel, last_pos);
+				lazy_placed_tiles.push_back(map.getTileOffset(last_pos));
 
 				lazy_pixel_index++;
 				processed++;
 			}
+
+			// update every iteration
+			string pos_str = int(lazy_pos.x) + "_" + int(lazy_pos.y);
+			rules.set("_room_tile_offsets_" + pos_str, @lazy_placed_tiles);
 
 			// If finished, do late load
 			if (lazy_pixel_index >= lazy_pixels_to_place.length)

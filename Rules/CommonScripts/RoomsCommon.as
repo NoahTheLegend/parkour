@@ -1,5 +1,5 @@
-Vec2f MAP_GRID = Vec2f(3, 2);
-Vec2f ROOM_SIZE = Vec2f(150, 150) * 8;
+Vec2f MAP_GRID = Vec2f(2, 1);
+Vec2f ROOM_SIZE = Vec2f(150, 150) * 8; // pathline offset issue, todo
 
 const u32 base_room_set_delay = 15;
 const u8 tiles_per_tick_base = 15;

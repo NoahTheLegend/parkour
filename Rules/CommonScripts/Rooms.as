@@ -69,6 +69,8 @@ void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
     {
         SetRoomCommand(this, params);
         UpdatePathlineData(this);
+
+        if (this.get_bool("close_on_room_select")) this.Tag("close_menu");
     }
     else if (cmd == this.getCommandID("create_room"))
     {

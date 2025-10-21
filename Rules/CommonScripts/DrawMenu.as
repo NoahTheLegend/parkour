@@ -11,6 +11,8 @@ const u32 warn_menu_movement_time = 30;
 const Vec2f default_grid = Vec2f(3, 4);
 const Vec2f default_grid_levels = Vec2f(3, 3);
 
+string hovering_filename = "";
+Vec2f hovering_size = Vec2f_zero;
 VideoPlayer@[] help_videos;
 
 VideoPlayer@[] active_help_videos;
@@ -91,8 +93,18 @@ void LoadLevels()
 			level.addHoverStateListener(levelHoverListener);
 			slider.addChild(level);
 
-			Icon@ icon = @Icon(path, -img_size / 2, img_size, 0, 1.0f, false);
+			f32 icon_scale = 1.0f;
+			f32 max = 100.0f;
+			
+			if (img_size.x > max || img_size.y > max)
+			{
+				f32 biggest = Maths::Max(img_size.x, img_size.y);
+				icon_scale = max / biggest;
+			}
+
+			Icon@ icon = @Icon(path, Vec2f_zero, img_size, 0, icon_scale, false);
 			icon.name = "icon";
+			icon.size = img_size;
 			level.addChild(icon);
 
 			Button@ text_pane = @Button(Vec2f_zero, Vec2f(40, 20), "", SColor(255, 0, 0, 0), "Terminus_12");
@@ -141,6 +153,13 @@ void onInit(CRules@ this)
 
 void onTick(CRules@ this)
 {
+	if (this.hasTag("close_menu"))
+	{
+		warn("[INF] Closing menu as requested");
+		showMenu = false;
+		this.Untag("close_menu");
+	}
+
 	bool initialized = this.get_bool("GUI initialized");
 	if ((!initialized || isGUINull()))
 	{
@@ -382,8 +401,8 @@ void InitializeGUI(CRules@ this)
 	levelsFrame.isEnabled = false;
 	menuWindow.addChild(levelsFrame);
 
-	Vec2f create_room_size = Vec2f(200, 100);
-	Vec2f create_room_pos = Vec2f((levelsFrame.size.x - create_room_size.x) / 2 - 0, (levelsFrame.size.y - create_room_size.y) / 2);
+	Vec2f create_room_size = Vec2f(300, 200);
+	Vec2f create_room_pos = Vec2f((levelsFrame.size.x - create_room_size.x) / 2 - 0, (levelsFrame.size.y - create_room_size.y) / 2 - 16);
 	Button@ createRoomButton = @Button(create_room_pos, create_room_size, "Create a room", SColor(255, 255, 255, 255), "Sakana_18");
 	createRoomButton.name = "createRoomButton";
 	createRoomButton.addClickListener(createRoomClickListener);
@@ -424,7 +443,7 @@ void InitializeGUI(CRules@ this)
 	levelsWrapper.addChild(knightLevelsFrame);
 
 	// slider and scrollers for knight levels
-	Rectangle@ knightLevelsFrameContentSlider = @Rectangle(mainFrame.localPosition + Vec2f(10, 32), mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
+	Rectangle@ knightLevelsFrameContentSlider = @Rectangle(Vec2f_zero, mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
 	knightLevelsFrameContentSlider.name = "slider";
 	knightLevelsFrameContentSlider._customData = -1;
 	knightLevelsFrame.addChild(knightLevelsFrameContentSlider);
@@ -457,7 +476,7 @@ void InitializeGUI(CRules@ this)
 	levelsWrapper.addChild(archerLevelsFrame);
 
 	// slider and scrollers for archer levels
-	Rectangle@ archerLevelsFrameContentSlider = @Rectangle(mainFrame.localPosition + Vec2f(10, 32), mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
+	Rectangle@ archerLevelsFrameContentSlider = @Rectangle(Vec2f_zero, mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
 	archerLevelsFrameContentSlider.name = "slider";
 	archerLevelsFrameContentSlider._customData = -1;
 	archerLevelsFrame.addChild(archerLevelsFrameContentSlider);
@@ -490,7 +509,7 @@ void InitializeGUI(CRules@ this)
 	levelsWrapper.addChild(builderLevelsFrame);
 
 	// slider and scrollers for builder levels
-	Rectangle@ builderLevelsFrameContentSlider = @Rectangle(mainFrame.localPosition + Vec2f(10, 32), mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
+	Rectangle@ builderLevelsFrameContentSlider = @Rectangle(Vec2f_zero, mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
 	builderLevelsFrameContentSlider.name = "slider";
 	builderLevelsFrameContentSlider._customData = -1;
 	builderLevelsFrame.addChild(builderLevelsFrameContentSlider);
@@ -654,6 +673,17 @@ void AddSettings(CRules@ this, Rectangle@ settingsFrame)
 	continuousTeleportToggle.addClickListener(toggleListener);
 	settingsFrame.addChild(continuousTeleportToggle);
 	prevHeight += buttonSize.y + gap;
+
+	// close menu on room select
+	bool close_on_room_select = this.get_bool("close_on_room_select");
+	Button@ closeOnRoomSelectToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Close menu on select: " + (close_on_room_select ? "YES" : "NO"), SColor(255, 255, 255, 255));
+	closeOnRoomSelectToggle.name = "closeOnRoomSelectToggle";
+	closeOnRoomSelectToggle.selfLabeled = true;
+	closeOnRoomSelectToggle.rectColor = SColor(255, 255, 115, 55);
+	closeOnRoomSelectToggle.toggled = close_on_room_select;
+	closeOnRoomSelectToggle.addClickListener(toggleListener);
+	settingsFrame.addChild(closeOnRoomSelectToggle);
+	prevHeight += buttonSize.y + gap;
 }
 
 void UpdateSettings(CRules@ this)
@@ -697,6 +727,14 @@ void UpdateSettings(CRules@ this)
 		bool continuous_teleport = continuousTeleportToggle.toggled;
 		this.set_bool("continuous_teleport", continuous_teleport);
 		continuousTeleportToggle.desc = "Continuous teleport: " + (continuous_teleport ? "YES" : "NO");
+	}
+
+	Button@ closeOnRoomSelectToggle = cast<Button@>(settingsFrame.getChild("closeOnRoomSelectToggle"));
+	if (closeOnRoomSelectToggle !is null)
+	{
+		bool close_on_room_select = closeOnRoomSelectToggle.toggled;
+		this.set_bool("close_on_room_select", close_on_room_select);
+		closeOnRoomSelectToggle.desc = "Close menu on select: " + (close_on_room_select ? "YES" : "NO");
 	}
 }
 
@@ -755,11 +793,6 @@ void updateOptionSliderValues()
     }
     item_distance = WheelMenu::default_item_distance * item_distance;
     */
-}
-
-void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
-{
-	
 }
 
 void onRender(CRules@ this)
@@ -836,12 +869,25 @@ void onRender(CRules@ this)
 		switcher.setPosition(Vec2f_lerp(switcher.localPosition, switcher.initialPosition + Vec2f(0, showMenu ? 30 : 0), 0.35f));
 	}
 
+	RenderHovering(this);
 	RenderShownVideos(active_help_videos, active_help_video_positions, showMenu);
 
 	bool initialized = this.get_bool("GUI initialized");
 	if (!initialized) return;
 
     // draw render inherits here
+}
+
+void RenderHovering(CRules@ this)
+{
+	if (hovering_filename == "") return;
+	Vec2f sz = getDriver().getScreenDimensions();
+
+	f32 scale = 3.0f;
+	Vec2f center = Vec2f(sz.x / 2, sz.y / 2);
+	//bg
+	GUI::DrawPane(center - hovering_size * scale - Vec2f(4,4), center + hovering_size * scale + Vec2f(4,4), SColor(255, 155, 25, 55));
+	GUI::DrawIcon(hovering_filename, 0, hovering_size, center - hovering_size * scale, scale, SColor(255, 255, 255, 255));
 }
 
 Vec2f getMenuPosHidden()
