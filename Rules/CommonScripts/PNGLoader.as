@@ -891,14 +891,14 @@ CBlob@ spawnBlob(CMap@ map, u16 player_id, const string &in name, u8 team, Vec2f
 	blob.set_u16("owner_id", player_id);
 	blob.Tag("owner_tag_" + player_id);
 
-	blob.set_s32("_support", blob.getShape().getConsts().support);
-	blob.getShape().getConsts().support = 0;
+	//blob.set_s32("_support", blob.getShape().getConsts().support);
+	//blob.getShape().getConsts().support = 0;
 	blob.getShape().SetStatic(fixed);
-	blob.AddScript("ResetSupport.as");
+	//blob.AddScript("ResetSupport.as");
 
 	blob.set_Vec2f("spawn_position", position);
 	blob.AddScript("WaitForRoomLoader.as");
-
+	
 	return blob;
 }
 
@@ -919,10 +919,10 @@ CBlob@ spawnBlob(CMap@ map, u16 player_id, const string &in name, u8 team, Vec2f
 	CBlob@ blob = spawnBlob(map, player_id, name, team, position, angle);
 	blob.set_u16("owner_id", player_id);
 
-	blob.set_s32("_support", blob.getShape().getConsts().support);
-	blob.getShape().getConsts().support = 0;
+	//blob.set_s32("_support", blob.getShape().getConsts().support);
+	//blob.getShape().getConsts().support = 0;
 	blob.getShape().SetStatic(fixed);
-	blob.AddScript("ResetSupport.as");
+	//blob.AddScript("ResetSupport.as");
 
 	blob.set_Vec2f("spawn_position", position);
 	blob.AddScript("WaitForRoomLoader.as");

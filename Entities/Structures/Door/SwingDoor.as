@@ -9,6 +9,7 @@ void onInit(CBlob@ this)
 {
 	this.getShape().SetRotationsAllowed(false);
 	this.getSprite().getConsts().accurateLighting = true;
+	this.getShape().getConsts().waterPasses = false;
 
 	this.set_s16(burn_duration , 300);
 	//transfer fire to underlying tiles
@@ -44,6 +45,7 @@ void onInit(CBlob@ this)
 			this.set('harvest', harvest);
 		}
 	}
+
 	this.Tag("door");
 	this.Tag("blocks water");
 	this.Tag("explosion always teamkill"); // ignore 'no teamkill' for explosives

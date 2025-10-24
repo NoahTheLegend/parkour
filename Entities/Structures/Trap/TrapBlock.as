@@ -8,6 +8,7 @@ int openRecursion = 0;
 void onInit(CBlob@ this)
 {
 	this.getShape().SetRotationsAllowed(false);
+	this.getShape().getConsts().waterPasses = false;
 
 	this.set_bool("open", false);
 	this.Tag("place norotate");

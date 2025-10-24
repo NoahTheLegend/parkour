@@ -3,13 +3,13 @@
 void onInit(CBlob@ this)
 {
 	this.SetFacingLeft(XORRandom(128) > 64);
-	this.getShape().getConsts().waterPasses = true;
+	this.getShape().getConsts().waterPasses = false;
 
 	CShape@ shape = this.getShape();
 	shape.AddPlatformDirection(Vec2f(0, -1), 89, false);
 	shape.SetRotationsAllowed(false);
 
-	this.server_setTeamNum(0);
+	this.server_setTeamNum(255);
 	this.set_TileType("background tile", CMap::tile_wood_back);
 
 	MakeDamageFrame(this);
@@ -20,11 +20,21 @@ void onTick(CBlob@ this)
 
 }
 
+bool doesCollideWithBlob(CBlob@ this, CBlob@ blob)
+{
+	return true;
+}
+
 void onHealthChange(CBlob@ this, f32 oldHealth)
 {
 	f32 hp = this.getHealth();
 	bool repaired = (hp > oldHealth);
 	MakeDamageFrame(this, repaired);
+}
+
+f32 onHit(CBlob@ this, Vec2f worldPoint, Vec2f velocity, f32 damage, CBlob@ hitterBlob, u8 customData)
+{
+	return 0;
 }
 
 void MakeDamageFrame(CBlob@ this, bool repaired = false)

@@ -34,8 +34,7 @@ void onInit(CRules@ this)
 
 	s_effects = false;
 
-	sv_max_localplayers = 1;
-
+	sv_max_localplayers = 2;
 	PrecacheTextures();
 
 	//smooth shader
