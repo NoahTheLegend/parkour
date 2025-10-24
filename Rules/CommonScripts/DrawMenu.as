@@ -108,14 +108,15 @@ void LoadClassLevels(const string &in dir, const string &in filePrefix, Rectangl
 			continue;
 		}
 
-		Rectangle@ level = @Rectangle(Vec2f(0, 0), img_size * 2, rectColor);
+		f32 icon_scale = 1.0f;
+		f32 max = 80.0f;
+
+		Rectangle@ level = @Rectangle(Vec2f(0, 0), Vec2f(Maths::Min(max * 2, img_size.x * 2), Maths::Min(max * 2, img_size.y * 2)), rectColor);
 		level.name = filePrefix + i;
 		level.addClickListener(loadLevelClickListener);
 		level.addHoverStateListener(levelHoverListener);
 		slider.addChild(level);
 
-		f32 icon_scale = 1.0f;
-		f32 max = 80.0f;
 		if (img_size.x > max || img_size.y > max)
 		{
 			f32 biggest = Maths::Max(img_size.x, img_size.y);

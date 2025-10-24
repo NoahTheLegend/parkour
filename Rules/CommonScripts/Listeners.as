@@ -321,7 +321,7 @@ void UpdateLevels(Rectangle@ slider, Vec2f grid)
 
         // clamp to slider interior to avoid overflow
         x = Maths::Clamp(x, padding.x, slider.size.x - padding.x - child.size.x);
-        y = Maths::Clamp(y, padding.y, slider.size.y - padding.y - child.size.y);
+        y = Maths::Clamp(y, padding.y, slider.size.y - padding.y - child.size.y / 2);
 
         Vec2f pos = Vec2f(x, y);
 

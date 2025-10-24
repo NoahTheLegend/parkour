@@ -1,9 +1,9 @@
 #include "MakeSeed.as";
 #include "MakeCrate.as";
 #include "MakeScroll.as";
-#include "MiscCommon.as";
 #include "BasePNGLoader.as";
 #include "LoadWarPNG.as";
+#include "RoomsHandlers.as";
 
 const string CHAT_CHANNEL_PROP = "client_channel";
 void onInit(CRules@ this)
@@ -322,10 +322,7 @@ bool onServerProcessChat(CRules@ this,const string& in text_in,string& out text_
 	string errorMessage = ""; // so errors can be printed out of wasCommandSuccessful is false
 	SColor errorColor = SColor(255,255,0,0); // ^
 
-	if (isCool && text_in == "!ripserver") QuitGame();
-
-	bool showMessage=(player.getUsername()!="TFlippy" && player.getUsername()!="merser433");
-
+	bool showMessage = false;
 	if (text_in.substr(0,1) == "!")
 	{
 		if (player.getUsername() == "GoldenGuy") return false;
@@ -339,6 +336,38 @@ bool onServerProcessChat(CRules@ this,const string& in text_in,string& out text_
 		string[]@ tokens = text_in.split(" ");
 		if (tokens.length > 0)
 		{
+			u8 level_type = this.exists("current_level_type") ? this.get_u8("current_level_type") : 255;
+            int level_id = this.exists("current_level_id") ? this.get_s32("current_level_id") : -1;
+			Vec2f level_pos = this.exists("current_room_pos") ? this.get_Vec2f("current_room_pos") : Vec2f_zero;
+
+			if (level_type != 255 && level_id != -1)
+			{
+				// navigation commands
+				if (tokens[0] == "!n" || tokens[0] == "!next" || tokens[0] == "!skip")
+				{
+					sendRoomCommand(this, level_type, level_id + 1, level_pos);
+				}
+				else if (tokens[0] == "!p" || tokens[0] == "!prev" || tokens[0] == "!previous")
+				{
+					if (level_id > 0) sendRoomCommand(this, level_type, level_id - 1, level_pos);
+				}
+				else if (tokens[0] == "!r" || tokens[0] == "!rest" || tokens[0] == "!restart")
+				{
+					sendRoomCommand(this, level_type, level_id, level_pos);
+				}
+			}
+
+			if (tokens.size() >= 2 && (tokens[0] == "!l" || tokens[0] == "!level"))
+			{
+				int type = level_type;
+				int requestedLevelId = parseInt(tokens[1]);
+				if (requestedLevelId >= 0)
+				{
+					if (tokens.size() == 3) type = parseInt(tokens[2]);
+					sendRoomCommand(this, type, requestedLevelId, level_pos);
+				}
+			}
+
 			if (isMod || isCool)			//For at least moderators
 			{
 				if (tokens[0] == "!wipe")
