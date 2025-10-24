@@ -3,6 +3,7 @@
 #include "TeamColour.as";
 #include "KGUI.as";
 #include "Listeners.as";
+#include "RoomsCommon.as";
 #include "PseudoVideoPlayer.as";
 
 const Vec2f menuSize = Vec2f(720, 480);
@@ -99,7 +100,13 @@ void LoadClassLevels(const string &in dir, const string &in filePrefix, Rectangl
 
 		CFileImage@ img = @CFileImage(path);
 		if (img is null) continue;
+
 		Vec2f img_size = Vec2f(img.getWidth(), img.getHeight());
+		if (img_size.x > ROOM_SIZE.x / 8 || img_size.y > ROOM_SIZE.y / 8)
+		{
+			warn("[WRN] Skipping level " + path + " due to excessive size: " + img_size.x + "x" + img_size.y);
+			continue;
+		}
 
 		Rectangle@ level = @Rectangle(Vec2f(0, 0), img_size * 2, rectColor);
 		level.name = filePrefix + i;

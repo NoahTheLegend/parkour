@@ -109,7 +109,7 @@ void onTick(CRules@ this)
 	{
 		need_sky_check = false;
 		CMap@ map = getMap();
-		//find out if there's any solid tiles in top row
+		// find out if there's any solid tiles in top row
 		// if not - semitransparent sky
 		// if yes - totally solid, looks buggy with "floating" tiles
 		bool has_solid_tiles = false;
