@@ -5,11 +5,11 @@
 #include "Listeners.as";
 #include "PseudoVideoPlayer.as";
 
-const Vec2f menuSize = Vec2f(500, 400);
+const Vec2f menuSize = Vec2f(720, 480);
 const f32 slideOffset = 100.0f; // extra height
 const u32 warn_menu_movement_time = 30;
-const Vec2f default_grid = Vec2f(3, 4);
-const Vec2f default_grid_levels = Vec2f(3, 3);
+const Vec2f default_grid = Vec2f(4, 4);
+const Vec2f default_grid_levels = Vec2f(4, 3);
 
 string hovering_filename = "";
 Vec2f hovering_size = Vec2f_zero;
@@ -73,67 +73,73 @@ bool isHidden()
 void LoadLevels()
 {
 	// knight
-	string k_path = "Rooms/Knight/";
-	string k_prefix = "k_";
-
-	u32 level_count = 0;
-	Rectangle@ slider = cast<Rectangle@>(knightLevelsFrame.getChild("slider"));
-	for (uint i = 0; i < 512; i++)
+	Rectangle@ k_slider = cast<Rectangle@>(knightLevelsFrame.getChild("slider"));
+	uint knight_count = 0;
+	if (k_slider !is null)
 	{
-		string path = CFileMatcher(k_path + k_prefix + i + ".png").getFirst();
-		if (path != "")
-		{
-			CFileImage@ img = @CFileImage(path);
-			if (img is null) continue;
-			Vec2f img_size = Vec2f(img.getWidth(), img.getHeight());
-
-			Rectangle@ level = @Rectangle(Vec2f(0, 0), img_size, SColor(0, 225, 179, 126));
-			level.name = "k_" + i;
-			level.addClickListener(loadLevelClickListener);
-			level.addHoverStateListener(levelHoverListener);
-			slider.addChild(level);
-
-			f32 icon_scale = 1.0f;
-			f32 max = 100.0f;
-			
-			if (img_size.x > max || img_size.y > max)
-			{
-				f32 biggest = Maths::Max(img_size.x, img_size.y);
-				icon_scale = max / biggest;
-			}
-
-			Icon@ icon = @Icon(path, Vec2f_zero, img_size, 0, icon_scale, false);
-			icon.name = "icon";
-			icon.size = img_size;
-			level.addChild(icon);
-
-			Button@ text_pane = @Button(Vec2f_zero, Vec2f(40, 20), "", SColor(255, 0, 0, 0), "Terminus_12");
-			text_pane.name = "text_pane";
-			text_pane.rectColor = SColor(255, 255, 0, 0);
-			level.addChild(text_pane);
-
-			Vec2f pane_size = Vec2f(text_pane.size.x / 2 - 2, 8);
-			Label@ text = @Label(pane_size + Vec2f(0, 1), pane_size, "" + i, SColor(255, 255, 255, 255), true, "Terminus_12");
-			text_pane.addChild(text);
-
-			level_count++;
-		}
-		else
-		{
-			break;
-		}
+		LoadClassLevels("Rooms/Knight/", "k_", k_slider, SColor(0, 225, 179, 126), "knight", knight_count);
 	}
 
-	print("Loaded " + level_count + " knight levels");
+	// archer
+	Rectangle@ a_slider = cast<Rectangle@>(archerLevelsFrame.getChild("slider"));
+	uint archer_count = 0;
+	if (a_slider !is null)
+	{
+		LoadClassLevels("Rooms/Archer/", "a_", a_slider, SColor(0, 179, 225, 126), "archer", archer_count);
+	}
+}
+
+void LoadClassLevels(const string &in dir, const string &in filePrefix, Rectangle@ slider, const SColor &in rectColor, const string &in logName, uint &out level_count)
+{
 	level_count = 0;
+	for (uint i = 0; i < 512; i++)
+	{
+		string path = CFileMatcher(dir + filePrefix + i + ".png").getFirst();
+		if (path == "") break;
+
+		CFileImage@ img = @CFileImage(path);
+		if (img is null) continue;
+		Vec2f img_size = Vec2f(img.getWidth(), img.getHeight());
+
+		Rectangle@ level = @Rectangle(Vec2f(0, 0), img_size * 2, rectColor);
+		level.name = filePrefix + i;
+		level.addClickListener(loadLevelClickListener);
+		level.addHoverStateListener(levelHoverListener);
+		slider.addChild(level);
+
+		f32 icon_scale = 1.0f;
+		f32 max = 80.0f;
+		if (img_size.x > max || img_size.y > max)
+		{
+			f32 biggest = Maths::Max(img_size.x, img_size.y);
+			icon_scale = max / biggest;
+		}
+
+		Icon@ icon = @Icon(path, Vec2f_zero, img_size, 0, icon_scale, false);
+		icon.name = "icon";
+		icon.size = img_size;
+		icon.scale = icon_scale;
+		level.addChild(icon);
+
+		Button@ text_pane = @Button(Vec2f_zero, Vec2f(40, 20), "", SColor(255, 0, 0, 0), "Terminus_12");
+		text_pane.name = "text_pane";
+		text_pane.rectColor = SColor(255, 255, 0, 0);
+		level.addChild(text_pane);
+
+		Vec2f pane_size = Vec2f(text_pane.size.x / 2 - 2, 8);
+		Label@ text = @Label(pane_size + Vec2f(0, 1), pane_size, "" + i, SColor(255, 255, 255, 255), true, "Terminus_12");
+		text_pane.addChild(text);
+
+		level_count++;
+	}
+
+	print("Loaded " + level_count + " " + logName + " levels");
 }
 
 void LoadVideos()
 {
 	f32 _10fps = 0.5f;
 	f32 _60fps = 3.0f / 1.0f;
-
-
 }
 
 void onInit(CRules@ this)
@@ -296,6 +302,14 @@ void InitializeGUI(CRules@ this)
 	Vec2f framePos = Vec2f(0, 50);
 	Vec2f frameSize = Vec2f(menuSize.x - framePos.x, menuSize.y - framePos.y);
 
+	// button positions
+	Vec2f button_size = Vec2f(menuSize.x / 5, 30);
+	Vec2f infoButtonPos = Vec2f(0, 0);
+	Vec2f levelsButtonPos = Vec2f(button_size.x * 2, 0);
+	Vec2f helpButtonPos = Vec2f(button_size.x, 0);
+	Vec2f settingsButtonPos = Vec2f(button_size.x * 3, 0);
+	Vec2f chessInfoButtonPos = Vec2f(button_size.x * 4, 0);
+
 	@mainFrame = @Rectangle(framePos, frameSize, SColor(0, 0, 0, 0));
 	mainFrame.name = "mainFrame";
 	mainFrame.setLevel(ContainerLevel::PAGE_FRAME);
@@ -322,7 +336,7 @@ void InitializeGUI(CRules@ this)
 	switchButton.addChild(switchButtonIcon);
 
 	// info frame
-	Button@ infoButton = @Button(Vec2f(menuSize.x - 500, 0), Vec2f(100, 30), "Info", SColor(255, 255, 255, 255), "Sakana_16");
+	Button@ infoButton = @Button(infoButtonPos, button_size, "Info", SColor(255, 255, 255, 255), "Sakana_16");
 	infoButton.addClickListener(pageClickListener);
 	infoButton.name = "infoButton";
 	infoButton.setLevel(ContainerLevel::PAGE_FRAME);
@@ -350,7 +364,7 @@ void InitializeGUI(CRules@ this)
 	Vec2f scrollerRightSize = Vec2f(25, mainFrame.size.y - 40);
 
 	// help frame
-	Button@ helpButton = @Button(Vec2f(menuSize.x - 400, 0), Vec2f(100, 30), "Help", SColor(255, 255, 255, 255), "Sakana_16");
+	Button@ helpButton = @Button(helpButtonPos, button_size, "Help", SColor(255, 255, 255, 255), "Sakana_16");
 	helpButton.addClickListener(pageClickListener);
 	helpButton.name = "helpButton";
 	helpButton.setLevel(ContainerLevel::PAGE_FRAME);
@@ -389,7 +403,7 @@ void InitializeGUI(CRules@ this)
 	helpFrame.addChild(helpFrameScrollerRight);
 
 	// levels frame
-	Button@ levelsButton = @Button(Vec2f(menuSize.x - 300, 0), Vec2f(100, 30), "Levels", SColor(255, 255, 255, 255), "Sakana_16");
+	Button@ levelsButton = @Button(levelsButtonPos, button_size, "Levels", SColor(255, 255, 255, 255), "Sakana_16");
 	levelsButton.addClickListener(pageClickListener);
 	levelsButton.name = "levelsButton";
 	levelsButton.setLevel(ContainerLevel::PAGE_FRAME);
@@ -401,7 +415,7 @@ void InitializeGUI(CRules@ this)
 	levelsFrame.isEnabled = false;
 	menuWindow.addChild(levelsFrame);
 
-	Vec2f create_room_size = Vec2f(300, 200);
+	Vec2f create_room_size = Vec2f(menuSize) * 0.75f;
 	Vec2f create_room_pos = Vec2f((levelsFrame.size.x - create_room_size.x) / 2 - 0, (levelsFrame.size.y - create_room_size.y) / 2 - 16);
 	Button@ createRoomButton = @Button(create_room_pos, create_room_size, "Create a room", SColor(255, 255, 255, 255), "Sakana_18");
 	createRoomButton.name = "createRoomButton";
@@ -478,7 +492,7 @@ void InitializeGUI(CRules@ this)
 	// slider and scrollers for archer levels
 	Rectangle@ archerLevelsFrameContentSlider = @Rectangle(Vec2f_zero, mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
 	archerLevelsFrameContentSlider.name = "slider";
-	archerLevelsFrameContentSlider._customData = -1;
+	archerLevelsFrameContentSlider._customData = 0;
 	archerLevelsFrame.addChild(archerLevelsFrameContentSlider);
 
 	Button@ archerLevelsFrameScrollerLeft = @Button(scrollerLeftPos, scrollerLeftSize, "<", SColor(255, 255, 255, 255), "Terminus_18");
@@ -511,7 +525,7 @@ void InitializeGUI(CRules@ this)
 	// slider and scrollers for builder levels
 	Rectangle@ builderLevelsFrameContentSlider = @Rectangle(Vec2f_zero, mainFrame.size - Vec2f(20, 62), SColor(0, 0, 0, 0));
 	builderLevelsFrameContentSlider.name = "slider";
-	builderLevelsFrameContentSlider._customData = -1;
+	builderLevelsFrameContentSlider._customData = 0;
 	builderLevelsFrame.addChild(builderLevelsFrameContentSlider);
 
 	Button@ builderLevelsFrameScrollerLeft = @Button(scrollerLeftPos, scrollerLeftSize, "<", SColor(255, 255, 255, 255), "Terminus_18");
@@ -550,7 +564,7 @@ void InitializeGUI(CRules@ this)
 	customLevelsFrame.addChild(openEditorButton);
 	
 	// settings frame
-	Button@ settingsButton = @Button(Vec2f(menuSize.x - 200, 0), Vec2f(100, 30), "Settings", SColor(255, 255, 255, 255), "Sakana_16");
+	Button@ settingsButton = @Button(settingsButtonPos, button_size, "Settings", SColor(255, 255, 255, 255), "Sakana_16");
 	settingsButton.addClickListener(pageClickListener);
 	settingsButton.name = "settingsButton";
 	settingsButton.setLevel(ContainerLevel::PAGE_FRAME);
@@ -566,7 +580,7 @@ void InitializeGUI(CRules@ this)
 	AddSettings(this, settingsFrame);
 
 	// chess info frame
-	Button@ chessInfoButton = @Button(Vec2f(menuSize.x - 100, 0), Vec2f(100, 30), "Chess", SColor(255, 255, 255, 255), "Sakana_16");
+	Button@ chessInfoButton = @Button(chessInfoButtonPos, button_size, "Chess", SColor(255, 255, 255, 255), "Sakana_16");
 	chessInfoButton.addClickListener(pageClickListener);
 	chessInfoButton.name = "chessInfoButton";
 	chessInfoButton.setLevel(ContainerLevel::PAGE_FRAME);

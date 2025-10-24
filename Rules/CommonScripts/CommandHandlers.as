@@ -73,6 +73,9 @@ void SetRoomCommand(CRules@ this, CBitStream@ params)
             this.set_Vec2f("current_room_pos", start_pos);
             this.set_Vec2f("current_room_size", room_size);
             this.set_Vec2f("current_room_center", start_pos + room_size * 0.5f);
+            
+            this.set_s32("current_complexity", 0); // reset complexity
+            this.set_string("current_level_type_name", getFullTypeName(level_type));
 
             print("[INF] Client: set current room to " + level_id + " of type " + level_type + " at pos " + start_pos);
         }

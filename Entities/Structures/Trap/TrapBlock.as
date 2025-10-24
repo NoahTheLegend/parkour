@@ -15,9 +15,7 @@ void onInit(CBlob@ this)
 	//block knight sword
 	this.Tag("blocks sword");
 	this.Tag("blocks water");
-
 	this.Tag("explosion always teamkill"); // ignore 'no teamkill' for explosives
-
 	this.set_TileType("background tile", CMap::tile_castle_back);
 
 	if (getNet().isServer())

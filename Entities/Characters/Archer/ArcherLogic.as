@@ -31,6 +31,7 @@ void onInit(CBlob@ this)
 	this.set_f32("gib health", -1.5f);
 	this.Tag("player");
 	this.Tag("flesh");
+	this.set_Vec2f("grapple_pos", Vec2f_zero);
 
 	ControlsSwitch@ controls_switch = @onSwitch;
 	this.set("onSwitch handle", @controls_switch);
@@ -82,6 +83,9 @@ void ManageGrapple(CBlob@ this, ArcherInfo@ archer)
 	CSprite@ sprite = this.getSprite();
 	u8 charge_state = archer.charge_state;
 	Vec2f pos = this.getPosition();
+
+	CRules@ rules = getRules();
+	if (rules is null) return;
 
 	bool right_click = this.isKeyJustPressed(key_action2);
 	CMap@ map = getMap();
@@ -183,7 +187,6 @@ void ManageGrapple(CBlob@ this, ArcherInfo@ archer)
 		{
 			const f32 archer_grapple_range = archer_grapple_length * archer.grapple_ratio;
 			const f32 archer_grapple_force_limit = this.getMass() * archer_grapple_accel_limit;
-
 			CMap@ map = this.getMap();
 
 			//reel in
@@ -274,6 +277,7 @@ void ManageGrapple(CBlob@ this, ArcherInfo@ archer)
 					{
 						archer.grapple_pos = next;
 					}
+
 					delta -= step;
 					found = checkGrappleStep(this, archer, map, dist);
 				}
@@ -348,9 +352,13 @@ void ManageGrapple(CBlob@ this, ArcherInfo@ archer)
 
 			}
 		}
-
+		
+		rules.set_Vec2f("grapple_pos", archer.grapple_pos);
 	}
-
+	else
+	{
+		rules.set_Vec2f("grapple_pos", this.getPosition());
+	}
 }
 
 void ManageBow(CBlob@ this, ArcherInfo@ archer, RunnerMoveVars@ moveVars)
@@ -777,7 +785,7 @@ void onTick(CBlob@ this)
 	{
 		return;
 	}
-
+	
 	ManageBow(this, archer, moveVars);
 
 	//print("state after: " + archer.charge_state);

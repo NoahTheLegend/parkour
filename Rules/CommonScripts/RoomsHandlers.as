@@ -32,6 +32,20 @@ string getTypeName(u8 level_type)
     return "unknown";
 }
 
+string getFullTypeName(u8 level_type)
+{
+    switch (level_type)
+    {
+        case RoomType::knight: return "Knight";
+        case RoomType::archer: return "Archer";
+        case RoomType::builder: return "Builder";
+        case RoomType::chess: return "Chess";
+        default: return "Unknown";
+    }
+
+    return "Unknown";
+}
+
 u8 getTypeFromName(string type_name)
 {
     if (type_name == "k") return RoomType::knight;

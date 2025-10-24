@@ -51,6 +51,8 @@ void GetButtonsFor(CBlob@ this, CBlob@ caller)
 	CPlayer@ p = caller.getPlayer();
 	if (p is null || p.getNetworkID() != this.get_u16("owner_id")) return;
 
+	if (this.getDistanceTo(caller) > 8.0f) return;
+
 	// check if next level swap is enabled
 	bool next_level_swap = rules.get_bool("next_level_swap");
 	if (next_level_swap) return;

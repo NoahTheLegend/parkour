@@ -358,7 +358,7 @@ class RoomPNGLoader
 			case map_colors::alpha_spikes:          autotile(offset); spawnBlob(map, player_id, "spikes",          getTeamFromChannel(alpha), position,                             true); break;
 			case map_colors::alpha_stone_door:      autotile(offset); spawnBlob(map, player_id, "stone_door",      getTeamFromChannel(alpha), position, getAngleFromChannel(alpha), true); break;
 			case map_colors::alpha_trap_block:      autotile(offset); spawnBlob(map, player_id, "trap_block",      getTeamFromChannel(alpha), position,                             true); break;
-			case map_colors::alpha_bridge:          autotile(offset); spawnBlob(map, player_id, "bridge",      	getTeamFromChannel(alpha), position,                             true); break;
+			case map_colors::alpha_bridge:          autotile(offset); spawnBlob(map, player_id, "bridge",      	   getTeamFromChannel(alpha), position,                             true); break;
 			case map_colors::alpha_wooden_door:     autotile(offset); spawnBlob(map, player_id, "wooden_door",     getTeamFromChannel(alpha), position, getAngleFromChannel(alpha), true); break;
 			case map_colors::alpha_wooden_platform: autotile(offset); spawnBlob(map, player_id, "wooden_platform", getTeamFromChannel(alpha), position, getAngleFromChannel(alpha), true); break;
 
@@ -656,10 +656,8 @@ class RoomPNGLoader
 		}
 	}
 
-	//override this to add post-load offset types.
 	void handleOffset(int type, int offset, int position, int count)
 	{
-		return;
 		switch (type)
 		{
 		case autotile_offset:
@@ -762,27 +760,55 @@ void PlaceMostLikelyTile(CMap@ map, int offset)
 	const TileType left = map.getTile(offset - 1).type;
 	const TileType right = map.getTile(offset + 1).type;
 
-	if (up != CMap::tile_empty)
-	{
-		const TileType[] neighborhood = { up, down, left, right };
+	const TileType[] neighborhood = { up, down, left, right };
 
-		if ((neighborhood.find(CMap::tile_castle) != -1) ||
-		    (neighborhood.find(CMap::tile_castle_back) != -1))
+	// improved placement: pick back-type based on neighboring solidity and opposite-side type.
+	{
+		// category checks (include back variants)
+		bool upCastle    = (up == CMap::tile_castle || up == CMap::tile_castle_back);
+		bool downCastle  = (down == CMap::tile_castle || down == CMap::tile_castle_back);
+		bool leftCastle  = (left == CMap::tile_castle || left == CMap::tile_castle_back);
+		bool rightCastle = (right == CMap::tile_castle || right == CMap::tile_castle_back);
+
+		bool upWood    = (up == CMap::tile_wood || up == CMap::tile_wood_back);
+		bool downWood  = (down == CMap::tile_wood || down == CMap::tile_wood_back);
+		bool leftWood  = (left == CMap::tile_wood || left == CMap::tile_wood_back);
+		bool rightWood = (right == CMap::tile_wood || right == CMap::tile_wood_back);
+
+		bool upGround    = (up == CMap::tile_ground || up == CMap::tile_ground_back);
+		bool downGround  = (down == CMap::tile_ground || down == CMap::tile_ground_back);
+		bool leftGround  = (left == CMap::tile_ground || left == CMap::tile_ground_back);
+		bool rightGround = (right == CMap::tile_ground || right == CMap::tile_ground_back);
+
+		// neighbor solidity (use map's definition)
+		bool upSolid    = map.isTileSolid(map.getTile(offset - map.tilemapwidth));
+		bool downSolid  = map.isTileSolid(map.getTile(offset + map.tilemapwidth));
+		bool leftSolid  = map.isTileSolid(map.getTile(offset - 1));
+		bool rightSolid = map.isTileSolid(map.getTile(offset + 1));
+
+		// If any axis has a solid neighbor on one side and a known-type neighbor on the opposite side,
+		// choose the opposite side's back-type. This implements "use top type if bottom is solid" and
+		// the analogous horizontal behavior (e.g. left solid + right is wood_back => use wood_back).
+		if ((downSolid && upCastle) || (upSolid && downCastle) || (leftSolid && rightCastle) || (rightSolid && leftCastle))
 		{
 			map.SetTile(offset, CMap::tile_castle_back);
+			return;
 		}
-		else if ((neighborhood.find(CMap::tile_wood) != -1) ||
-		         (neighborhood.find(CMap::tile_wood_back) != -1))
+
+		if ((downSolid && upWood) || (upSolid && downWood) || (leftSolid && rightWood) || (rightSolid && leftWood))
 		{
-			map.SetTile(offset, CMap::tile_wood_back );
+			map.SetTile(offset, CMap::tile_wood_back);
+			return;
 		}
-		else if ((neighborhood.find(CMap::tile_ground) != -1) ||
-		         (neighborhood.find(CMap::tile_ground_back) != -1))
+
+		if ((downSolid && upGround) || (upSolid && downGround) || (leftSolid && rightGround) || (rightSolid && leftGround))
 		{
 			map.SetTile(offset, CMap::tile_ground_back);
+			return;
 		}
 	}
-	else if(map.isTileSolid(down) && (map.isTileGrass(left) || map.isTileGrass(right)))
+
+	if (map.isTileSolid(down) && (map.isTileGrass(left) || map.isTileGrass(right)))
 	{
 		map.SetTile(offset, CMap::tile_grass + 2 + map_random.NextRanged(2));
 	}

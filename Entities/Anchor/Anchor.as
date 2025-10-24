@@ -28,6 +28,11 @@ void onTick(CBlob@ this)
 	if (player is null) return;
 
 	if (!player.isMyPlayer()) return;
+	if (isClient() && this.getTickSinceCreated() == 1)
+	{
+		CRules@ rules = getRules();
+		if (rules !is null) rules.set_Vec2f("current_anchor_pos", this.getPosition());
+	}
 
 	CBlob@ blob = player.getBlob();
 	if (blob is null) return;

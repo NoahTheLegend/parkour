@@ -278,6 +278,9 @@ void UpdateLevels(Rectangle@ slider, Vec2f grid)
 {
     const bool debug_levels_bg = false; // set to true to enable debug background coloring
 
+    Rectangle@ parent = cast<Rectangle@>(slider.parent);
+    if (parent is null) return;
+
     int showing_page = slider._customData;
     int showing_count = int(grid.x * grid.y);
 
@@ -328,10 +331,12 @@ void UpdateLevels(Rectangle@ slider, Vec2f grid)
         Icon@ icon = cast<Icon@>(child.getChild("icon"));
         if (icon !is null)
         {
+            // compute the displayed size (icon.size * icon.scale) and center that inside the child
             f32 icon_scale = icon.scale;
-            float ix = (icon.size.x * icon_scale - child.size.x) / 2.0f;
-            float iy = (icon.size.y * icon_scale - child.size.y) / 2.0f;
-            icon.setPosition(Vec2f(ix, iy) - icon.size / 2);
+            Vec2f displayed = Vec2f(icon.size.x * icon_scale, icon.size.y * icon_scale);
+
+            Vec2f icon_pos = Vec2f((child.size.x - displayed.x) * 0.5f, (child.size.y - displayed.y) * 0.5f);
+            icon.setPosition(icon_pos - displayed / 2);
         }
 
         // place text pane below the child, centered
@@ -381,6 +386,7 @@ void loadLevelClickListener(int x, int y, int button, IGUIItem@ sender)
     if (level_id < 0) return;
 
     Vec2f pos = getRoomPosFromID(room_id);
+    print(spl[0]+" "+type);
     sendRoomCommand(rules, type, level_id, pos);
 }
 
@@ -443,13 +449,12 @@ void scrollerClickListener(int x, int y, int button, IGUIItem@ sender)
         slider._customData = Maths::Clamp(slider._customData, 0, help_videos.size() / (grid.x * grid.y));
         UpdateHelpFrameVideos(slider, grid);
     }
-    else if (parent.name == "knightLevelsFrame" || parent.name == "archerLevelsFrame" || parent.name == "builderLevelsFrame")
+    else
     {
         Vec2f grid = default_grid_levels;
         slider._customData = Maths::Clamp(slider._customData, 0, slider.children.size() / (grid.x * grid.y));
         UpdateLevels(slider, grid);
     }
-
 }
 
 // updates the help frame videos based on the current page and grid size
