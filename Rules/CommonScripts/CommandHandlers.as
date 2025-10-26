@@ -223,18 +223,24 @@ void CreateRoomCommand(CRules@ this, CBitStream@ params)
     u8[]@ room_ids;
     if (!this.get("room_ids", @room_ids)) {print("[CMD] Failed to get room ids"); return;}
 
+    u8[]@ level_types;
+    if (!this.get("level_types", @level_types)) {print("[CMD] Failed to get level types"); return;}
+
+    u16[]@ level_ids;
+    if (!this.get("level_ids", @level_ids)) {print("[CMD] Failed to get level ids"); return;}
+
     u16[]@ room_owners;
     if (!this.get("room_owners", @room_owners)) {print("[CMD] Failed to get room owners"); return;}
 
-    if (room_ids is null || room_owners is null)
+    if (room_ids is null || level_types is null || level_ids is null || room_owners is null)
     {
         print("[CMD] Room ids or owners not found");
         return;
     }
 
-    if (room_ids.length != room_owners.length)
+    if (room_ids.length != room_owners.length || room_ids.length != level_types.length || room_ids.length != level_ids.length)
     {
-        print("[CMD] Room ids and owners length mismatch");
+        print("[CMD] Length mismatch in CommandHandlers.as");
         return;
     }
 
@@ -271,6 +277,8 @@ void CreateRoomCommand(CRules@ this, CBitStream@ params)
     for (uint i = 0; i < room_ids.size(); i++)
     {
         params1.write_u8(room_ids[i]);
+        params1.write_u8(level_types[i]);
+        params1.write_u16(level_ids[i]);
         params1.write_u16(room_owners[i]);
     }
 
@@ -291,6 +299,8 @@ void SyncRoomOwnerCommand(CRules@ this, CBitStream@ params)
     if (!params.saferead_u8(rooms_count)) {print("[CMD] Failed to read rooms count [1]"); return;}
 
     u8[] room_ids;
+    u8[] level_types;
+    u16[] level_ids;
     u16[] room_owners;
 
     for (uint i = 0; i < rooms_count; i++)
@@ -298,6 +308,14 @@ void SyncRoomOwnerCommand(CRules@ this, CBitStream@ params)
         u8 room_id;
         if (!params.saferead_u8(room_id)) {print("[CMD] Failed to read room id"); return;}
         room_ids.push_back(room_id);
+        
+        u8 level_type;
+        if (!params.saferead_u8(level_type)) {print("[CMD] Failed to read level type"); return;}
+        level_types.push_back(level_type);
+
+        u16 level_id;
+        if (!params.saferead_u16(level_id)) {print("[CMD] Failed to read level id"); return;}
+        level_ids.push_back(level_id);
 
         u16 owner_id;
         if (!params.saferead_u16(owner_id)) {print("[CMD] Failed to read room owner id"); return;}
@@ -307,6 +325,8 @@ void SyncRoomOwnerCommand(CRules@ this, CBitStream@ params)
     print("[INF] Synced room owners with " + rooms_count + " rooms count, " + room_ids.length + " room ids and " + room_owners.length + " owners");
     
     this.set("room_ids", @room_ids);
+    this.set("level_types", @level_types);
+    this.set("level_ids", @level_ids);
     this.set("room_owners", @room_owners);
     
     CPlayer@ p = getPlayerByNetworkId(pid);

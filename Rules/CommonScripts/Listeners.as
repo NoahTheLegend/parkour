@@ -387,7 +387,6 @@ void loadLevelClickListener(int x, int y, int button, IGUIItem@ sender)
     if (level_id < 0) return;
 
     Vec2f pos = getRoomPosFromID(room_id);
-    print(spl[0]+" "+type);
     sendRoomCommand(rules, local.getNetworkID(), type, level_id, pos);
 }
 

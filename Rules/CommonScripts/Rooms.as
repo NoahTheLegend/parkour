@@ -44,8 +44,12 @@ void onRestart(CRules@ this)
     // set captured room data to none
     this.set_u8("captured_room_id", 255);
     u8[] room_ids;
+    u8[] level_types;
+    u16[] level_ids;
     u16[] room_owners;
     this.set("room_ids", @room_ids);
+    this.set("level_types", @level_types);
+    this.set("level_ids", @level_ids);
     this.set("room_owners", @room_owners);
 }
 
@@ -67,19 +71,16 @@ void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
     else if (cmd == this.getCommandID("set_room"))
     {
         SetRoomCommand(this, params);
-        UpdatePathlineData(this);
 
         if (this.get_bool("close_on_room_select")) this.Tag("close_menu");
     }
     else if (cmd == this.getCommandID("create_room"))
     {
         CreateRoomCommand(this, params);
-        UpdatePathlineData(this);
     }
     else if (cmd == this.getCommandID("sync_room"))
     {
         SyncRoomCommand(this, params);
-        UpdatePathlineData(this);
     }
     else if (cmd == this.getCommandID("sync_room_owners"))
     {
@@ -91,8 +92,6 @@ void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
     }
     else if (cmd == this.getCommandID("editor"))
     {
-        UpdatePathlineData(this);
-
         // todo, wip
         u16 pid;
         if (!params.saferead_u16(pid)) {print("[CMD] Failed to read player id"); return;}
@@ -116,7 +115,6 @@ void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
 
 bool cfg_loaded = false;
 ConfigFile@ pathline_cfg = @ConfigFile();
-string[] positions_str;
 
 void onRender(CRules@ this)
 {
@@ -126,17 +124,6 @@ void onRender(CRules@ this)
     u8 room_id = this.get_u8("captured_room_id");
     RenderMessages(this);
 
-    CControls@ controls = getControls();
-    if (controls !is null)
-    {
-        if (controls.isKeyJustPressed(KEY_RSHIFT))
-        {
-            debug_test = !debug_test;
-            Sound::Play2D("ButtonClick.ogg", 1.0f, 1.5f);
-        }
-    }
-
-    string pathline_key = this.exists("pathline_key") ? this.get_string("pathline_key") : "";
     if (local_room_coords !is null)
     {
         // room_id of 255 means "none"
@@ -163,91 +150,110 @@ void onRender(CRules@ this)
 
     if (debug_test)
     {
-        f32 y = 200.0f;
+        Vec2f start_pos = Vec2f(100, 200);
 
-        string recording = this.get_bool("recording_pathline") ? "ON" : "OFF";
-        GUI::DrawText("Pathline recording: " + recording, Vec2f(100, y), SColor(255, 255, 255, 0));
+        // draw debug overlay with useful state from this script
+        GUI::SetFont("menu");
 
-        GUI::DrawText("Pathline key: " + pathline_key, Vec2f(100, y + 20), SColor(255, 255, 255, 0));
+        f32 line_h = 14.0f;
+        uint l = 0;
+        Vec2f p = start_pos;
 
-        string pathline_state = this.get_u8("pathline_state") == 0 ? "HIDDEN" : "SHOWING";
-        GUI::DrawText("Pathline test state: " + pathline_state, Vec2f(100, y + 40), SColor(255, 255, 255, 0));
+        // basic level / mode info
+        string lvl_type_name = this.get_string("current_level_type_name");
+        int lvl_id = this.get_s32("current_level_id");
+        int lvl_complex = this.get_s32("current_level_complexity");
+        GUI::DrawText("LEVEL: " + lvl_type_name + " (" + lvl_id + ")", p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
+        GUI::DrawText("COMPLEXITY: " + lvl_complex, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
 
-        string showing_index = "Showing index: ";
-        if (this.get_u8("pathline_state") == 1 && positions_str.length > 0)
+        // room capture / current room
+        u8 captured = this.get_u8("captured_room_id");
+        GUI::DrawText("CAPTURED ROOM ID: " + captured, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
+
+        Vec2f cur_pos = this.get_Vec2f("current_room_pos");
+        Vec2f cur_size = this.get_Vec2f("current_room_size");
+        Vec2f cur_center = this.get_Vec2f("current_room_center");
+        GUI::DrawText("CURRENT ROOM POS: (" + int(cur_pos.x) + "," + int(cur_pos.y) + ")", p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
+        GUI::DrawText("CURRENT ROOM SIZE: (" + int(cur_size.x) + "," + int(cur_size.y) + ")", p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
+        GUI::DrawText("CURRENT ROOM CENTER: (" + int(cur_center.x) + "," + int(cur_center.y) + ")", p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
+
+        // pathline / recording state
+        u8 pathline_state = this.get_u8("pathline_state");
+        u32 pathline_start = this.get_u32("pathline_start_time");
+        bool recording = this.get_bool("recording_pathline");
+        Vec2f recording_startpos = this.get_Vec2f("recording_startpos");
+        GUI::DrawText("PATHLINE STATE: " + pathline_state, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
+        GUI::DrawText("PATHLINE START: " + pathline_start + "  RECORDING: " + recording, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
+        GUI::DrawText("RECORD START POS: (" + int(recording_startpos.x) + "," + int(recording_startpos.y) + ")", p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
+
+        // cached pathline positions
+        int cached_sz = cached_positions.size();
+        GUI::DrawText("CACHED POSITIONS: " + cached_sz, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
+
+        // arrays / counts
+        u8[]@ room_ids; u8[]@ level_types; u16[]@ level_ids; u16[]@ room_owners;
+        int room_count = 0;
+        if (this.get("room_ids", @room_ids)) room_count = room_ids.size();
+        int level_types_count = 0;
+        if (this.get("level_types", @level_types)) level_types_count = level_types.size();
+        int level_ids_count = 0;
+        if (this.get("level_ids", @level_ids)) level_ids_count = level_ids.size();
+        int room_owners_count = 0;
+        if (this.get("room_owners", @room_owners)) room_owners_count = room_owners.size();
+
+        GUI::DrawText("ROOMS: " + room_count + " | LEVEL_TYPES: " + level_types_count + " | LEVEL_IDS: " + level_ids_count, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
+        string pk = "none";
+        if (captured != 255)
         {
-            u32 start_time = this.get_u32("pathline_start_time");
-            int diff = getGameTime() - start_time;
-            diff %= positions_str.length;
-            showing_index += "" + diff;
-        }
-        else showing_index += "N/A";
-        GUI::DrawText(showing_index, Vec2f(100, y + 60), SColor(255, 255, 255, 0));
-
-        string quantity = "Positions cached: " + cached_positions.length;
-        GUI::DrawText(quantity, Vec2f(100, y + 80), SColor(255, 255, 255, 0));
-
-        string room_exists_in_config = "Room exists in config: ";
-        if (!cfg_loaded) room_exists_in_config += "NO";
-        else room_exists_in_config += positions_str.length > 0 ? "YES" : "NO";
-        GUI::DrawText(room_exists_in_config, Vec2f(100, y + 100), SColor(255, 255, 255, 0));
-
-        CMap@ map = getMap();
-        if (map !is null)
-        {
-            string map_size = "Map size: " + (map.tilemapwidth) + " x " + (map.tilemapheight) + "   /   " + (map.tilemapwidth * map.tilesize) + " x " + (map.tilemapheight * map.tilesize);
-            string player_coord = "Player pos: ";
-            CBlob@ pblob = getLocalPlayerBlob();
-            if (pblob !is null)
+            string keyname = "pathline_key_" + captured;
+            if (this.exists(keyname))
             {
-                Vec2f ppos = pblob.getPosition();
-                player_coord += "(" + int(ppos.x) + ", " + int(ppos.y) + ")";
+                pk = this.get_string(keyname);
             }
             else
             {
-                player_coord += "N/A";
-            }
-
-            GUI::DrawText(map_size, Vec2f(100, y + 120), SColor(255, 255, 255, 0));
-            GUI::DrawText(player_coord, Vec2f(100, y + 140), SColor(255, 255, 255, 0));
-        }
-    }
-
-    // render each room id, its owner and coords
-    if (local_room_coords !is null)
-    {
-        u8[]@ room_ids;
-        if (!this.get("room_ids", @room_ids)) return;
-
-        u16[]@ room_owners;
-        if (!this.get("room_owners", @room_owners)) return;
-
-        for (uint i = 0; i < room_ids.size(); i++)
-        {
-            Vec2f room_pos = local_room_coords[i];
-
-            // determine owner name safely
-            string owner_name = "none";
-            u16 owner_id = 0;
-            if (i < room_owners.length)
-            {
-                owner_id = room_owners[i];
-                if (owner_id != 0)
+                u8[]@ level_types;
+                u16[]@ level_ids;
+                u8[]@ room_ids;
+                if (this.get("level_types", @level_types) && this.get("level_ids", @level_ids) && this.get("room_ids", @room_ids))
                 {
-                    CPlayer@ owner_player = getPlayerByNetworkId(owner_id);
-                    owner_name = owner_player !is null ? owner_player.getUsername() : "unknown";
+                    uint ci = uint(captured);
+                    if (ci < level_types.size() && ci < level_ids.size() && ci < room_ids.size())
+                    {
+                        pk = "_p_" + level_types[ci] + "_" + level_ids[ci] + "_" + room_ids[ci];
+                    }
                 }
             }
+        }
+        GUI::DrawText("PATHLINE KEY: " + pk, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
 
-            // build display text
-            string text = "Room " + i + "; Position (" + int(room_pos.x) + ", " + int(room_pos.y) + "); Owner " + owner_name;
-            
-            Vec2f screen_pos = getDriver().getScreenPosFromWorldPos(Vec2f(room_pos.x + ROOM_SIZE.x * 0.5f, room_pos.y));
-            GUI::DrawTextCentered(text, screen_pos, SColor(255, 255, 255, 255));
+        // room coordinates array (local_room_coords may be set on reload)
+        int local_coords_count = (local_room_coords is null) ? 0 : local_room_coords.length;
+        GUI::DrawText("LOCAL ROOM COORDS: " + local_coords_count, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
 
-            // draw room ids and owners on screen in localhost
-            screen_pos = Vec2f(800, 200 + i * 40);
-            GUI::DrawText(text, screen_pos, SColor(255, 255, 255, 0));
+        // config / pathline cfg state
+        GUI::DrawText("CFG LOADED: " + cfg_loaded, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
+        string cfg_file = (pathline_cfg is null) ? "null" : "parkour_pathlines.cfg";
+        GUI::DrawText("PATHLINE CFG: " + cfg_file, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
+
+        // misc runtime values
+        GUI::DrawText("DEBUG_TEST: " + debug_test, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
+
+        // show first few room ids/owners if present
+        for (uint i = 0; i < 6 && i < room_count; i++)
+        {
+            string owner_str = "none";
+            if (i < room_owners_count)
+            {
+            u16 oid = room_owners[i];
+            if (oid != 0)
+            {
+                CPlayer@ owner_p = getPlayerByNetworkId(oid);
+                owner_str = owner_p !is null ? owner_p.getUsername() : ("id:" + oid);
+            }
+            }
+            Vec2f rc = (local_room_coords !is null && i < local_room_coords.length) ? local_room_coords[i] : Vec2f(0,0);
+            GUI::DrawText("R[" + i + "] id:" + (room_ids is null ? 0 : room_ids[i]) + " owner:" + owner_str + " pos:(" + int(rc.x) + "," + int(rc.y) + ")", p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
         }
     }
 
@@ -259,6 +265,7 @@ void onRender(CRules@ this)
     GUI::SetFont("Terminus_18");
     GUI::DrawText("LEVEL: " + type_name + " " + level_id, Vec2f(10, 10), SColor(255, 255, 255, 255));
     GUI::DrawText("COMPLEXITY: ", Vec2f(10, 30), SColor(255, 255, 255, 255));
+    
     // colored text
     // todo
     SColor col = SColor(255, 255, 255, 255);
@@ -305,17 +312,79 @@ void RenderMessages(CRules@ this)
 bool debug_test = true;
 void onTick(CRules@ this)
 {
-    if (!this.hasTag("was_init")) CreateRoomsGrid(this);
-    if (!cfg_loaded) UpdatePathlineData(this);
+    // client listener
+    CControls@ controls = getControls();
+    if (isClient() && controls !is null)
+    {
+        CPlayer@ local = getLocalPlayer();
+        if (local is null) return;
 
+        u16 local_id = local.getNetworkID();
+        if (controls.isKeyJustPressed(KEY_RSHIFT))
+        {
+            debug_test = !debug_test;
+            Sound::Play2D("ButtonClick.ogg", 1.0f, 1.5f);
+        }
+
+        if (controls.isKeyJustPressed(KEY_LCONTROL))
+        {
+            u8 room_id = this.get_u8("captured_room_id");
+
+            u8 current_type = this.get_u8("current_level_type");
+            int current_level = this.get_s32("current_level_id");
+    
+            if (room_id != 255 && current_level != -1)
+            {
+                CBlob@[] personal_pathlines;
+                if (!getBlobsByTag("personal_pathline_" + room_id, @personal_pathlines)){}
+                
+                CBlob@ personal_pathline_blob;
+                if (personal_pathlines.size() > 0)
+                    @personal_pathline_blob = personal_pathlines[0];
+
+                if (personal_pathline_blob !is null)
+                {
+                    CBitStream params;
+                    params.write_u16(local_id);
+                    params.write_u32(getGameTime());
+                    params.write_u8(current_type);
+                    personal_pathline_blob.SendCommand(personal_pathline_blob.getCommandID("switch"), params);
+
+                    Sound::Play2D("ButtonClick.ogg", 1.0f, 1.5f);
+                }
+            }
+        }
+    }
+
+    if (!this.hasTag("was_init")) CreateRoomsGrid(this);
     CMap@ map = getMap();
+
     if (map is null) return;
     if (!isServer()) return;
 
     EnsureRoomsOwned(this);
     RunRoomLoaders(this);
 
-    string pathline_key = this.exists("pathline_key") ? this.get_string("pathline_key") : "";
+    u8[]@ room_ids;
+    if (!this.get("room_ids", @room_ids)) return;
+
+    // set cfg if not loaded on startup
+    if (!cfg_loaded)
+    {
+        u8[]@ level_types;
+        if (!this.get("level_types", @level_types)) return;
+
+        u16[]@ level_ids;
+        if (!this.get("level_ids", @level_ids)) return;
+
+        string[][] room_pathlines;
+        if (!this.get("room_pathlines", @room_pathlines))
+        {
+            room_pathlines = loadRoomPathlines(this, room_ids, level_types, level_ids, room_pathlines);
+            this.set("room_pathlines", @room_pathlines);
+        }
+    }
+
     if (isServer() && getGameTime() == 30 && this.exists("update_hub_pos"))
     {
         Vec2f hub_pos = this.get_Vec2f("update_hub_pos");
@@ -329,268 +398,278 @@ void onTick(CRules@ this)
 		}
     }
 
-    PathlineTick(this, pathline_key);
+    PathlineTick(this);
 }
 
-void PathlineTick(CRules@ this, const string &in pathline_key)
+string[][] loadRoomPathlines(CRules@ this, u8[]@ &in room_ids, u8[]@ &in level_types, u16[]@ &in level_ids, string[][]&out room_pathlines)
 {
-    if (isServer())
+    if (room_ids.size() != level_types.size() || room_ids.size() != level_ids.size())
     {
-        for (u8 i = 0; i < getPlayersCount(); i++)
+        print("[ERR] loadRoomPathlines: room_ids or level_types or level_ids size mismatch");
+        return room_pathlines;
+    }
+
+    for (u8 i = 0; i < room_ids.size(); i++)
+    {
+        u8 room_id = room_ids[i];
+        string pathline_key = "_p_" + level_types[i] + "_" + level_ids[i] + "_" + room_id;
+
+        string[] positions;
+        pathline_cfg.readIntoArray_string(positions, pathline_key);
+        room_pathlines.push_back(positions);
+    }
+
+    return room_pathlines;
+}
+
+// runs only on server and localhost
+void PathlineTick(CRules@ this)
+{
+    u8[]@ room_ids;
+    if (!this.get("room_ids", @room_ids)) return;
+
+    u8[]@ level_types;
+    if (!this.get("level_types", @level_types)) return;
+
+    u16[]@ level_ids;
+    if (!this.get("level_ids", @level_ids)) return;
+
+    u16[]@ room_owners;
+    if (!this.get("room_owners", @room_owners)) return;
+
+    for (u8 i = 0; i < room_ids.size(); i++)
+    {
+        s32 update_level_id = this.get_s32("update_room_pathline_" + i);
+        if (update_level_id != -1)
         {
-            CPlayer@ p = getPlayer(i);
-            if (p is null) continue;
+            u8 room_id = room_ids[i];
 
-            CBlob@[] personal_pathline;
-            if (!getBlobsByTag("personal_pathline_" + p.getNetworkID(), @personal_pathline))
-            {
-                CBlob@ pathline_blob = server_CreateBlob("pathline", -1, Vec2f(0,0));
-                if (pathline_blob !is null)
-                {
-                    pathline_blob.Tag("personal_pathline_" + p.getNetworkID());
-                    pathline_blob.set_u16("pathline_test_owner_id", p.getNetworkID());
+            u8[]@ level_types;
+            if (!this.get("level_types", @level_types)) return;
 
-                    this.set_u16("pathline_test_blob_id", pathline_blob.getNetworkID());
-                    this.Sync("pathline_test_blob_id", true);
-                }
-            }
+            u16[]@ level_ids;
+            if (!this.get("level_ids", @level_ids)) return;
+
+            UpdatePathlineData(this, this.get_string("pathline_key_" + i), i);
+            this.set_s32("update_room_pathline_" + i, -1);
         }
     }
 
-    u8 pathline_state = this.get_u8("pathline_state");
-    u32 start_time = this.get_u32("pathline_start_time");
-    bool recording_pathline = this.get_bool("recording_pathline");
-    Vec2f recording_startpos = this.get_Vec2f("recording_startpos");
-
-    bool show_pathline = this.get_bool("enable_pathline");
-    u16 pathline_blob_id = this.get_u16("pathline_test_blob_id");
-
-    CBlob@ pblob = getBlobByNetworkID(pathline_blob_id);
-    if (pblob is null) return;
-
-    Vec2f player_pos = pblob.getPosition();
-    Vec2f player_old_pos = pblob.getOldPosition();
-
-    // manage controls & debug
-    if (isClient())
+    string[][]@ room_pathlines;
+    if (!this.get("room_pathlines", @room_pathlines))
     {
-        CControls@ controls = getControls();
-        if (controls is null) return;
+        print("[ERR] PathlineTick: could not load room_pathlines");
+        return;
+    }
+
+    for (u8 i = 0; i < room_ids.size(); i++)
+    {
+        CBlob@[] personal_pathlines;
+        if (!getBlobsByTag("personal_pathline_" + i, @personal_pathlines))
+        {
+            CBlob@ pathline_blob = server_CreateBlob("pathline", -1, Vec2f(0,0));
+            if (pathline_blob !is null)
+            {
+                pathline_blob.Tag("personal_pathline_" + i);
+                pathline_blob.set_string("pathline_tag", "personal_pathline_" + i);
+
+                pathline_blob.set_u8("room_id", i);
+                pathline_blob.set_bool("active", false);
+                pathline_blob.set_u32("start_time", 0);
+                pathline_blob.set_Vec2f("room_pos", getRoomPosFromID(i));
+            }
+        }
+        else if (i < personal_pathlines.size())
+        {
+            CBlob@ pathline_blob = personal_pathlines[i];
+            if (pathline_blob is null) continue;
+
+            pathline_blob.set_u16("owner_id", room_owners[i]);
+        }
+    }
+
+    // manage controls & debug, only for localhost
+    CPlayer@ local = getLocalPlayer();
+    if (local is null) return;
+    u16 local_id = local.getNetworkID();
+
+    CBlob@ local_blob = getLocalPlayerBlob();
+    if (local_blob is null) return;
+
+    Vec2f player_pos = local_blob.getPosition();
+    Vec2f player_old_pos = local_blob.getOldPosition();
+
+    CControls@ controls = getControls();
+    if (controls is null) return;
+
+    u8 room_id = this.get_u8("captured_room_id");
+    if (room_id != 255)
+    {
+        // used for recording
+        bool recording_pathline = this.get_bool("recording_pathline");
+        Vec2f recording_startpos = this.get_Vec2f("recording_startpos");
+
+        CBlob@ personal_pathline_blob;
+        CBlob@[] personal_pathlines;
+        if (getBlobsByTag("personal_pathline_" + room_id, @personal_pathlines))
+        {
+            @personal_pathline_blob = personal_pathlines[0];
+        }
 
         // toggle record on/off
-        if (isServer() && controls.isKeyJustPressed(KEY_MBUTTON)) // for localhost only
+        if (controls.isKeyJustPressed(KEY_MBUTTON)) // for localhost only
         {
             Sound::Play2D("ButtonClick.ogg", 1.0f, 1.5f);
 
             recording_pathline = !recording_pathline;
-            CBlob@ local_player_blob = getLocalPlayerBlob();
-            if (local_player_blob !is null)
+            recording_startpos = player_pos;
+        }
+
+        if (recording_pathline) // for localhost only
+        {
+            string[][]@ room_pathlines;
+            if (!this.get("room_pathlines", @room_pathlines)) recording_pathline = false;
+
+            if (room_id >= room_pathlines.length) recording_pathline = false;
+            RecordPathline(this, local_blob, recording_startpos, player_pos, player_old_pos);
+
+            if (!recording_pathline)
             {
-                recording_startpos = local_player_blob.getPosition();
+                SetClientMessage(local_id, "[ERR] Can not record pathline!");
             }
 
-            //CBitStream params;
-            //params.write_bool(recording_pathline);
-            //params.write_Vec2f(recording_startpos);
-            //this.SendCommand(this.getCommandID("sync_pathline_to_server"), params);
+            if (personal_pathline_blob !is null) personal_pathline_blob.set_bool("active", !recording_pathline);
         }
 
-        if (show_pathline)
+        // save when recording stops
+        bool stopped_recording = !recording_pathline && this.get_bool("recording_pathline");
+        if (stopped_recording)
         {
-            // display
-            if (controls.isKeyJustPressed(KEY_LCONTROL)) start_time = getGameTime();
-            pathline_state = controls.isKeyPressed(KEY_LCONTROL) ? 1 : 0;
+            string pathline_key = "_p_" + level_types[room_id] + "_" + level_ids[room_id] + "_" + room_id; // test 0
+            SavePathline(this, pathline_key, room_id, stopped_recording);
         }
+
+        this.set_bool("recording_pathline", recording_pathline);
+        this.set_Vec2f("recording_startpos", recording_startpos);
     }
 
-    bool is_archer = false;
-    if (isServer())
+    CBlob@[] personal_pathlines;
+    CBlob@[] pathlines_unsorted;
+    if (getBlobsByName("pathline", @pathlines_unsorted))
     {
-        if (recording_pathline)
+        for (uint i = 0; i < pathlines_unsorted.length; i++)
         {
-            CBlob@ local_player_blob = getLocalPlayerBlob();
-            if (local_player_blob !is null)
-            {
-                player_pos = local_player_blob.getPosition();
-                player_old_pos = local_player_blob.getOldPosition();
+            CBlob@ pathline_blob = pathlines_unsorted[i];
+            if (pathline_blob is null) continue;
 
-                is_archer = local_player_blob.getName() == "archer";
-            }
+            if (!pathline_blob.exists("active") || !pathline_blob.get_bool("active")) continue;
+            u8 room_id = pathline_blob.get_u8("room_id");
 
-            RecordPathline(this, local_player_blob, recording_startpos, player_pos, player_old_pos);
-        }
-        // replay recorded path (now stored as pairs when archer)
-        else if (pathline_state == 1)
-        {
-            int diff = getGameTime() - start_time;
-            if (positions_str.length <= 0) return;
-
-            // if positions were stored as pairs (archer), treat entries as pairs count.
-            int entries = positions_str.length;
-            bool pairs_mode = !is_archer && (entries % 2 == 0 && entries >= 2);
-            int frames = pairs_mode ? entries / 2 : entries;
-
-            if (frames <= 0) return;
-
-            diff %= frames;
-            bool ok = (diff >= 0 && diff < frames);
-            if (ok)
-            {
-                // main indices
-                int mainIndex = diff * (pairs_mode ? 2 : 1);
-                int prevIndex = (diff > 0) ? (mainIndex - (pairs_mode ? 2 : 1)) : -1;
-
-                string old_s = "";
-                int old_parsed = -1;
-                bool has_old = false;
-                if (prevIndex >= 0)
-                {
-                    old_s = positions_str[prevIndex];
-                    old_parsed = parseInt(old_s);
-                    has_old = (old_parsed != -1);
-                }
-
-                string s = positions_str[mainIndex];
-                int parsed = parseInt(s);
-                ok = (parsed != -1);
-
-                // grapple index (if pairs_mode)
-                int grappleIndex = pairs_mode ? mainIndex + 1 : -1;
-                int grapple_parsed = -1;
-                if (pairs_mode && grappleIndex < positions_str.length)
-                {
-                    string gs = positions_str[grappleIndex];
-                    grapple_parsed = parseInt(gs); // may be -1 if invalid
-                }
-
-                if (ok)
-                {
-                    RunPathline(this, pblob, parsed, has_old, old_parsed, grapple_parsed);
-                }
-            }
+            personal_pathlines.insertAt(room_id, pathline_blob);
         }
     }
 
-    // save when recording stops
-    bool stopped_recording = !recording_pathline && this.get_bool("recording_pathline");
-    if (stopped_recording) print(cached_positions.length + " positions recorded for pathline key " + pathline_key);
-    if (stopped_recording && cached_positions.length > 0)
+    for (uint i = 0; i < personal_pathlines.length; i++)
     {
-        if (pathline_cfg.exists(pathline_key)) pathline_cfg.remove(pathline_key);
-        pathline_cfg.addArray_string(pathline_key, cached_positions);
-        pathline_cfg.saveFile("parkour_pathlines.cfg");
+        CBlob@ pathline_blob = personal_pathlines[i];
+        if (pathline_blob is null) continue;
 
-        print("[INF] Saved pathline with " + cached_positions.length + " positions to key " + pathline_key);
-        cached_positions.clear();
+        u8 room_id = pathline_blob.get_u8("room_id");
+        if (room_id >= room_pathlines.length) continue;
 
-        // update cfg_loaded and pathline_key, then set positions_str
-        UpdatePathlineData(this);
+        string[]@ positions_str = room_pathlines[room_id];
+        if (positions_str is null || positions_str.length == 0) continue;
+
+        // determine pairs mode from level_types (archer uses pairs)
+        bool pairs_mode = false;
+        if (room_id < level_types.length)
+        {
+            u8 lt = level_types[room_id];
+            pairs_mode = (lt == RoomType::archer);
+        }
+
+        // timing / frames
+        u32 start_time = pathline_blob.get_u32("start_time");
+        int diff = int(getGameTime()) - int(start_time);
+
+        int entries = int(positions_str.length);
+        if (entries <= 0) continue;
+
+        int frames = pairs_mode ? entries / 2 : entries;
+        if (frames <= 0) continue;
+        
+        diff %= frames;
+        bool ok = (diff >= 0 && diff < frames);
+
+        if (!ok) continue;
+        bool reset = (diff == 0);
+
+        int step = pairs_mode ? 2 : 1;
+        int mainIndex = diff * step;
+        int prevIndex = (diff > 0) ? (mainIndex - step) : -1;
+
+        string old_s = "";
+        int old_parsed = -1;
+        bool has_old = false;
+        if (prevIndex >= 0 && prevIndex < entries)
+        {
+            old_s = positions_str[prevIndex];
+            old_parsed = parseInt(old_s);
+            has_old = (old_parsed != -1);
+        }
+
+        if (mainIndex < 0 || mainIndex >= entries) continue;
+        string s = positions_str[mainIndex];
+        int parsed = parseInt(s);
+        if (parsed == -1) continue;
+
+        int grapple_parsed = -1;
+        if (pairs_mode)
+        {
+            int grappleIndex = mainIndex + 1;
+            if (grappleIndex < entries)
+            {
+                string gs = positions_str[grappleIndex];
+                grapple_parsed = parseInt(gs); // may be -1 if invalid
+            }
+        }
+
+        // run pathline update for this blob
+        RunPathline(this, pathline_blob, parsed, has_old, old_parsed, grapple_parsed, reset);
     }
-
-    this.set_u8("pathline_state", pathline_state);
-    this.set_u32("pathline_start_time", start_time);
-    this.set_bool("recording_pathline", recording_pathline);
-    this.set_Vec2f("recording_startpos", recording_startpos);
 }
 
-void RunPathline(CRules@ this, CBlob@ pblob, int parsed, bool has_old, int old_parsed, int grapple_parsed)
+void RunPathline(CRules@ this, CBlob@ pathline_blob, int parsed, bool has_old,
+                int old_parsed, int grapple_parsed, bool reset)
 {
+    if (pathline_blob is null) return;
+
     u32 packed = u32(parsed);
-    Vec2f room_pos = this.get_Vec2f("current_room_pos");
-
     Vec2f pos = UnpackVec2f(packed);
+    Vec2f anchor_pos = pathline_blob.get_Vec2f("anchor_pos"); // this is set from anchor on creation
+
     Vec2f oldpos = has_old ? UnpackVec2f(u32(old_parsed)) : Vec2f(0,0);
-
-    bool exists_anchor_pos = this.exists("current_anchor_pos");
-    Vec2f anchor_pos = exists_anchor_pos ? this.get_Vec2f("current_anchor_pos") : Vec2f(0, 0);
-    Vec2f anchor_offset_to_room = exists_anchor_pos ? anchor_pos : Vec2f(0, 0);
-    Vec2f endpos = pos + room_pos + anchor_offset_to_room;
-
-    Vec2f gpos_rel = grapple_parsed != -1 ? UnpackVec2f(u32(grapple_parsed)) + anchor_offset_to_room : endpos;
-    Vec2f gpos = gpos_rel;
-
-    // particles
-    // ensure at least one particle even if pos == oldpos
-    u32 quantity = 1;
-    if (has_old)
-    {
-        int raw = Maths::Ceil((pos - oldpos).Length());
-        quantity = raw > 0 ? u32(raw) : 1;
-    }
-
-    if (isClient())
-    {
-        for (u32 i = 0; i < quantity; i++)
-        {
-            f32 t = quantity > 1 ? f32(i) / f32(quantity - 1) : 0.0f;
-            Vec2f interp = has_old ? oldpos + (pos - oldpos) * t : pos;
-
-            // world position for this particle (trail)
-            interp += anchor_offset_to_room;
-            int time = 30;
-
-            // determine world end position (current player pos)
-            Vec2f world_endpos = endpos; // already includes room_pos and anchor offset
-
-            // draw grapple line (only once per frame, from endpos to grapple pos)
-            if (grapple_parsed != -1 && grapple_parsed != parsed && i == quantity - 1)
-            {
-                Vec2f dir = gpos - world_endpos;
-                f32 dist = dir.Length();
-                if (dist > 16.0f)
-                {
-                    // particle spacing: roughly one particle per 8 pixels (tweak as needed)
-                    f32 spacing = 1.0f;
-                    u32 line_qty = u32(Maths::Ceil(dist / spacing));
-                    if (line_qty == 0) line_qty = 1;
-
-                    for (u32 j = 0; j < line_qty; j++)
-                    {
-                        f32 tt = line_qty > 1 ? f32(j) / f32(line_qty - 1) : 0.0f;
-                        Vec2f at = world_endpos + dir * tt;
-                        u8 ctime = Maths::Max(2, tt * 1);
-
-                        CParticle@ lp = ParticleAnimated("PathlineCursorGrapple.png", at, Vec2f(0,0), 0, 0, ctime, 0.0f, true);
-                        if (lp !is null)
-                        {
-                            lp.fastcollision = true;
-                            lp.gravity = Vec2f(0, 0);
-                            lp.scale = 0.25f;
-                            lp.growth = -0.01f;
-                            lp.deadeffect = -1;
-                            lp.collides = false;
-                            lp.Z = 50.0f;
-                        }
-                    }
-                }
-            }
-
-            // main particle: use endpos for the current position (put trail particles at interp, final one at endpos)
-            Vec2f particle_pos = (i == quantity - 1) ? world_endpos : interp;
-
-            CParticle@ p = ParticleAnimated("PathlineCursor.png", particle_pos, Vec2f(0,0), 0, 0, time, 0.0f, true);
-            if (p !is null)
-            {
-                p.fastcollision = true;
-                p.gravity = Vec2f(0, 0);
-                p.scale = 0.75f;
-                p.growth = -0.05f;
-                p.deadeffect = -1;
-                p.collides = false;
-
-                f32 sin = Maths::Sin(getGameTime() * 0.1f) * 0.5f + 0.5f;
-                SColor col = SColor(255, 255 - sin * 85, 255 - sin * 25, 255 - sin * 85);
-                p.colour = col;
-                p.forcecolor = col;
-            }
-        }
-    }
+    Vec2f endpos = pos + anchor_pos;
+    Vec2f gpos = grapple_parsed != -1 ? UnpackVec2f(u32(grapple_parsed)) + anchor_pos : endpos;
 
     // update vars
-    if (isServer())
+    pathline_blob.setPosition(endpos);
+    
+    Vec2f last_gpos = pathline_blob.get_Vec2f("grapple_pos");
+    if (last_gpos != gpos)
     {
-        pblob.setPosition(endpos);
-        pblob.setAimPos(gpos);
+        pathline_blob.set_Vec2f("last_grapple_pos", last_gpos);
+
+        if (gpos != endpos) pathline_blob.set_Vec2f("grapple_pos", gpos);
+        else pathline_blob.set_Vec2f("grapple_pos", Vec2f(0,0));
+
+        pathline_blob.Tag("sync");
+    }
+
+    if (reset)
+    {
+        pathline_blob.Tag("wait");
+        pathline_blob.Tag("sync");
     }
 }
 
@@ -632,23 +711,48 @@ void RecordPathline(CRules@ this, CBlob@ local_player_blob, Vec2f recording_star
     }
 }
 
-void UpdatePathlineData(CRules@ this)
+void SavePathline(CRules@ this, string pathline_key, u8 room_id, bool stopped_recording)
 {
-    string pathline_key = "_p_" + this.get_u8("current_level_type") + "_" + this.get_s32("current_level_id");
-    this.set_string("pathline_key", pathline_key);
+    if (stopped_recording && cached_positions.size() > 0)
+    {
+        if (pathline_cfg.exists(pathline_key)) pathline_cfg.remove(pathline_key);
+        pathline_cfg.addArray_string(pathline_key, cached_positions);
+        pathline_cfg.saveFile("parkour_pathlines.cfg");
+
+        print("[INF] Saved pathline data for key " + pathline_key + ", size: " + cached_positions.size() + ", for room id " + room_id);
+        cached_positions.clear();
+
+        // update cfg_loaded and pathline_key
+        UpdatePathlineData(this, pathline_key, room_id);
+    }
+}
+
+void UpdatePathlineData(CRules@ this, string pathline_key, u8 room_id)
+{
+    string[][]@ room_pathlines;
+    if (!this.get("room_pathlines", @room_pathlines))
+    {
+        error("[ERR] UpdatePathlineData: could not load room_pathlines");
+        return;
+    }
 
     if (pathline_cfg is null)
     {
-        @pathline_cfg = @ConfigFile();
-        warn("[WRN] Client: pathline_cfg was null, recreated");
+        warn("[WRN] Client: pathline_cfg was nullon update");
     }
 
     ConfigFile@ empty = @ConfigFile();
     @pathline_cfg = @empty;
 
+    print("[INF] Client: reloading pathline config for key " + pathline_key + " and room id " + room_id + ", pathline size " + room_pathlines.size());
+    // read from cache again to update to the latest data
     cfg_loaded = pathline_cfg.loadFile("../Cache/parkour_pathlines.cfg");
-    positions_str.clear();
+    if (room_id < room_pathlines.size())
+    {
+        string[] temp;
+        pathline_cfg.readIntoArray_string(temp, pathline_key);
 
-    pathline_cfg.readIntoArray_string(positions_str, pathline_key);
-    print("[INF] Client: updated pathline data for key " + pathline_key + " with " + positions_str.length + " positions, new size: " + positions_str.length);
+        room_pathlines[room_id] = temp;
+        print("[INF] Client: updated pathline data for key " + pathline_key + ", new size: " + room_pathlines[room_id].size());
+    }
 }

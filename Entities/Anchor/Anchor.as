@@ -29,10 +29,18 @@ void onTick(CBlob@ this)
 	if (player is null) return;
 
 	if (!player.isMyPlayer()) return;
-	if (isClient() && this.getTickSinceCreated() == 1)
+	if (isServer() && this.getTickSinceCreated() == 1)
 	{
-		CRules@ rules = getRules();
-		if (rules !is null) rules.set_Vec2f("current_anchor_pos", this.getPosition());
+		CBlob@[] pathline_blobs;
+		getBlobsByName("pathline", @pathline_blobs);
+
+		for (int i = 0; i < pathline_blobs.length; i++)
+		{
+			CBlob@ pathline_blob = pathline_blobs[i];
+			if (pathline_blob is null) continue;
+
+			pathline_blob.set_Vec2f("anchor_pos", this.getPosition());
+		}
 	}
 
 	CBlob@ blob = player.getBlob();

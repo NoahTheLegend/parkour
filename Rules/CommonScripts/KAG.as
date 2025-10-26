@@ -13,7 +13,6 @@ void onInit(CRules@ this)
 	this.addCommandID("editor");
 	this.addCommandID("set_client_message");
 	this.addCommandID("room_chatcommand");
-	this.addCommandID("sync_pathline_to_server");
 	
 	LoadDefaultMapLoaders();
 	LoadDefaultGUI();
@@ -37,7 +36,7 @@ void onInit(CRules@ this)
 
 	s_effects = false;
 
-	sv_max_localplayers = 2;
+	sv_max_localplayers = 1;
 	PrecacheTextures();
 
 	//smooth shader

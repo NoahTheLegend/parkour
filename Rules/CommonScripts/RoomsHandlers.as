@@ -4,16 +4,16 @@
 // builds the room for the specified player
 void BuildRoom(CRules@ this, u16 pid, u8 level_type, int level_id, Vec2f room_size, Vec2f start_pos)
 {
-    // ensure player has room
+    u16[]@ room_owners;
+    if (!this.get("room_owners", @room_owners))
+    {
+        error("[ERR] BuildRoom: failed to get room_owners");
+        return;
+    }
+
+    // ensure the player has a room
     if (pid != 0)
     {
-        u16[]@ room_owners;
-        if (!this.get("room_owners", @room_owners))
-        {
-            error("[ERR] BuildRoom: failed to get room_owners");
-            return;
-        }
-
         if (room_owners.find(pid) == -1)
         {
             error("[ERR] Player " + pid + " does not own any room, cannot build room");
@@ -33,7 +33,7 @@ void BuildRoom(CRules@ this, u16 pid, u8 level_type, int level_id, Vec2f room_si
         params1.write_Vec2f(room_size);
         params1.write_Vec2f(start_pos);
         params1.write_Vec2f(start_pos + room_size * 0.5f); // center
-        params1.write_s32(0); // complexity
+        params1.write_s32(0); // complexity, todo
         params1.write_string(getFullTypeName(level_type));
 
         this.SendCommand(this.getCommandID("sync_room"), params1);
@@ -45,6 +45,33 @@ void BuildRoom(CRules@ this, u16 pid, u8 level_type, int level_id, Vec2f room_si
     {
         error("[ERR] Room file " + file + " not found, loading empty room");
         file = "Maps/Hub.png";
+    }
+
+    u8[]@ level_types;
+    if (!this.get("level_types", @level_types))
+    {
+        print("[CMD] Failed to get level types");
+        return;
+    }
+
+    u8 room_id = room_owners.find(pid);
+    if (room_id < level_types.size()) level_types[room_id] = level_type; // server tracking
+    
+    u16[]@ level_ids;
+    if (!this.get("level_ids", @level_ids))
+    {
+        print("[CMD] Failed to get level ids");
+        return;
+    }
+    
+
+    if (room_id < level_ids.size()) level_ids[room_id] = level_id;
+    this.set_s32("update_room_pathline_" + room_id, level_id);
+    
+    if (room_id < level_types.size() && room_id < level_ids.size())
+    {
+        string pathline_key = "_p_" + level_types[room_id] + "_" + level_ids[room_id] + "_" + room_id;
+        this.set_string("pathline_key_" + room_id, pathline_key);
     }
 
     EraseRoom(this, start_pos, room_size); // tag for room creation
@@ -101,8 +128,6 @@ Vec2f getRoomPosFromID(int room_id)
     CMap@ map = getMap();
     if (map is null) return Vec2f_zero;
 
-    print("[INF] Calculating position for room ID " + room_id);
-
     int map_width = map.tilemapwidth * 8;
     int map_height = map.tilemapheight * 8;
 
@@ -149,8 +174,10 @@ void CreateRoomsGrid(CRules@ this, Vec2f[] override_room_coords = Vec2f[]())
 
     Vec2f[] room_coords;
     u8[] room_ids;
+    u8[] level_types;
+    u16[] level_ids;
     u16[] room_owners;
-
+    
     if (override_room_coords.length() > 0)
     {
         room_coords = override_room_coords;
@@ -167,7 +194,7 @@ void CreateRoomsGrid(CRules@ this, Vec2f[] override_room_coords = Vec2f[]())
 
         u8 rooms_count = u8(cols * rows);
         u8 middle_hub_id = u8(Maths::Floor(rooms_count / 2.0f));
-
+        
         // iterate row-major: y (rows) outer, x (cols) inner
         for (int ry = 0; ry < rows; ry++)
         {
@@ -190,6 +217,8 @@ void CreateRoomsGrid(CRules@ this, Vec2f[] override_room_coords = Vec2f[]())
 
                 room_coords.push_back(Vec2f(x, y));
                 room_ids.push_back(room_ids.length);
+                level_types.push_back(RoomType::knight); // default type
+                level_ids.push_back(0); // default id
                 room_owners.push_back(0); // no owner yet
             }
         }
@@ -201,6 +230,8 @@ void CreateRoomsGrid(CRules@ this, Vec2f[] override_room_coords = Vec2f[]())
     this.set("room_coords", room_coords);
 
     this.set("room_ids", @room_ids);
+    this.set("level_types", @level_types);
+    this.set("level_ids", @level_ids);
     this.set("room_owners", @room_owners);
 }
 
@@ -237,6 +268,20 @@ void EnsureRoomsOwned(CRules@ this)
     if (!this.get("room_ids", @room_ids))
     {
         if (gt % 30 == 0) error("[ERR] EnsureRoomsOwned: failed to get room_ids");
+        return;
+    }
+
+    u8[]@ level_types;
+    if (!this.get("level_types", @level_types))
+    {
+        if (gt % 30 == 0) error("[ERR] EnsureRoomsOwned: failed to get level_types");
+        return;
+    }
+
+    u16[]@ level_ids;
+    if (!this.get("level_ids", @level_ids))
+    {
+        if (gt % 30 == 0) error("[ERR] EnsureRoomsOwned: failed to get level_ids");
         return;
     }
 
