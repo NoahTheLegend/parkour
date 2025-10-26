@@ -1,9 +1,11 @@
 #include "RoomsCommon.as";
 #include "RoomsHandlers.as";
+#include "CommandHandlers.as";
 
 void onInit(CBlob@ this)
 {
 	this.addCommandID("teleport");
+	this.addCommandID("teleport_client");
 
 	this.getShape().SetRotationsAllowed(false);
 	this.getSprite().getConsts().accurateLighting = true;
@@ -23,7 +25,7 @@ void onTick(CBlob@ this)
 		this.getCurrentScript().tickFrequency = 0;
 	}
 
-	if (this.hasTag("ready") && this.get_u32("teleport_time") + base_exit_delay < getGameTime())
+	if (isClient() && this.hasTag("ready") && this.get_u32("teleport_time") + base_exit_delay < getGameTime())
 	{
 		CBlob@ blob = getBlobByNetworkID(this.get_u16("teleported_blob_id"));
 		if (blob is null) return;
@@ -33,12 +35,16 @@ void onTick(CBlob@ this)
 			CRules@ rules = getRules();
 			if (rules is null) return;
 
+			CPlayer@ player = blob.getPlayer();
+			if (player is null) return;
+
 			u8 level_type = rules.get_u8("current_level_type");
 			s32 level_id = rules.get_s32("current_level_id");
 			Vec2f start_pos = rules.get_Vec2f("current_room_pos");
 			Vec2f room_size = rules.get_Vec2f("current_room_size");
 
-			sendRoomCommand(rules, level_type, level_id + 1, start_pos);
+			print("sent exit "+level_type+" "+(level_id + 1)+" "+start_pos.x+" "+start_pos.y);
+			sendRoomCommand(rules, player.getNetworkID(), level_type, level_id + 1, start_pos);
 		}
 	}
 }
@@ -56,9 +62,10 @@ void GetButtonsFor(CBlob@ this, CBlob@ caller)
 	// check if next level swap is enabled
 	bool next_level_swap = rules.get_bool("next_level_swap");
 	if (next_level_swap) return;
-
+	
 	CBitStream params;
-	params.write_u16(caller.getNetworkID());
+	params.write_bool(false);
+	params.write_u16(p.getNetworkID());
 
 	CButton@ button = caller.CreateGenericButton(
 		11,
@@ -74,41 +81,68 @@ void onCommand(CBlob@ this, u8 cmd, CBitStream@ params)
 {
 	if (cmd == this.getCommandID("teleport"))
 	{
+		bool collision;
+		if (!params.saferead_bool(collision)) { print("Failed to read collision bool"); return; }
+
 		u16 pid;
 		if (!params.saferead_u16(pid)) { print("Failed to read player ID"); return; }
 
-		// handled in onTick to allow delay
-		this.set_u16("teleported_blob_id", pid);
-		this.set_u32("teleport_time", getGameTime());
+		CBitStream params1;
+		params1.write_bool(collision);
+		params1.write_u16(pid);
+		this.SendCommand(this.getCommandID("teleport_client"), params1);
+	}
+	else if (cmd == this.getCommandID("teleport_client"))
+	{
+		bool collision;
+		if (!params.saferead_bool(collision)) { print("Failed to read collision bool"); return; }
 
-		this.Tag("ready");
-		this.getCurrentScript().tickFrequency = 1;
+		u16 pid;
+		if (!params.saferead_u16(pid)) { print("Failed to read player ID"); return; }
+
+		CPlayer@ p = getPlayerByNetworkId(pid);
+		if (p is null) return;
+
+		CRules@ rules = getRules();
+		if (rules is null) return;
+
+		bool next_level_swap = rules.get_bool("next_level_swap");
+		if (collision && !next_level_swap)
+		{
+			// do nothing, handled in onCollision
+			return;
+		}
+	
+		// teleport player into next room
+		if (this.getTickSinceCreated() < 1) return; // wait a bit after creation
+		if (p !is null)
+		{
+			CBlob@ blob = p.getBlob();
+			if (blob is null) return;
+
+			this.set_u16("teleported_blob_id", blob.getNetworkID());
+			this.set_u32("teleport_time", getGameTime());
+
+			this.Tag("ready");
+			this.getCurrentScript().tickFrequency = 1;
+		}
 	}
 }
 
 void onCollision(CBlob@ this, CBlob@ blob, bool solid)
 {
+	if (!isServer()) return;
+
 	if (blob is null) return;
 	if (!blob.hasTag("player")) return;
 
 	CPlayer@ p = blob.getPlayer();
 	if (p is null || p.getNetworkID() != this.get_u16("owner_id")) return;
 
-	CRules@ rules = getRules();
-	if (rules is null) return;
-
-	// check if next level swap is enabled
-	bool next_level_swap = rules.get_bool("next_level_swap");
-	if (!next_level_swap) return;
-
-	// teleport player into next room
-	if (this.getTickSinceCreated() < 1) return; // wait a bit after creation
-
-	this.set_u16("teleported_blob_id", blob.getNetworkID());
-	this.set_u32("teleport_time", getGameTime());
-
-	this.Tag("ready");
-	this.getCurrentScript().tickFrequency = 1;
+	CBitStream params;
+	params.write_bool(true);
+	params.write_u16(p.getNetworkID());
+	this.SendCommand(this.getCommandID("teleport_client"), params);
 }
 
 bool doesCollideWithBlob(CBlob@ this, CBlob@ blob)

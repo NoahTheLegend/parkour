@@ -15,6 +15,7 @@ void SetClientMessage(u16 pid, string msg)
     params.write_u16(pid);
     params.write_string(msg);
     rules.SendCommand(rules.getCommandID("set_client_message"), params, p);
+    print("sent cli msg");
 }
 
 // wraps text to fit within max_width using the specified font

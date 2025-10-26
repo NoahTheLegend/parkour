@@ -1,7 +1,6 @@
 #include "KGUI.as";
 #include "PNGLoader.as";
 #include "RoomsCommon.as";
-#include "RoomsListeners.as";
 #include "RoomsHandlers.as";
 #include "RoomsHooks.as";
 #include "Helpers.as";
@@ -37,8 +36,8 @@ void onRestart(CRules@ this)
     this.set_Vec2f("current_room_center", Vec2f(0,0));
     
     // clear pathline test data
-    this.set_u8("test_pathline_state", 0); // hidden
-    this.set_u32("test_pathline_start_time", 0);
+    this.set_u8("pathline_state", 0); // hidden
+    this.set_u32("pathline_start_time", 0);
     this.set_bool("recording_pathline", false);
     cached_positions.clear();
 
@@ -77,9 +76,18 @@ void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
         CreateRoomCommand(this, params);
         UpdatePathlineData(this);
     }
+    else if (cmd == this.getCommandID("sync_room"))
+    {
+        SyncRoomCommand(this, params);
+        UpdatePathlineData(this);
+    }
     else if (cmd == this.getCommandID("sync_room_owners"))
     {
         SyncRoomOwnerCommand(this, params);
+    }
+    else if (cmd == this.getCommandID("room_chatcommand"))
+    {
+        RoomChatCommand(this, params);
     }
     else if (cmd == this.getCommandID("editor"))
     {
@@ -118,6 +126,16 @@ void onRender(CRules@ this)
     u8 room_id = this.get_u8("captured_room_id");
     RenderMessages(this);
 
+    CControls@ controls = getControls();
+    if (controls !is null)
+    {
+        if (controls.isKeyJustPressed(KEY_RSHIFT))
+        {
+            debug_test = !debug_test;
+            Sound::Play2D("ButtonClick.ogg", 1.0f, 1.5f);
+        }
+    }
+
     string pathline_key = this.exists("pathline_key") ? this.get_string("pathline_key") : "";
     if (local_room_coords !is null)
     {
@@ -152,13 +170,13 @@ void onRender(CRules@ this)
 
         GUI::DrawText("Pathline key: " + pathline_key, Vec2f(100, y + 20), SColor(255, 255, 255, 0));
 
-        string pathline_state = this.get_u8("test_pathline_state") == 0 ? "HIDDEN" : "SHOWING";
+        string pathline_state = this.get_u8("pathline_state") == 0 ? "HIDDEN" : "SHOWING";
         GUI::DrawText("Pathline test state: " + pathline_state, Vec2f(100, y + 40), SColor(255, 255, 255, 0));
 
         string showing_index = "Showing index: ";
-        if (this.get_u8("test_pathline_state") == 1 && positions_str.length > 0)
+        if (this.get_u8("pathline_state") == 1 && positions_str.length > 0)
         {
-            u32 start_time = this.get_u32("test_pathline_start_time");
+            u32 start_time = this.get_u32("pathline_start_time");
             int diff = getGameTime() - start_time;
             diff %= positions_str.length;
             showing_index += "" + diff;
@@ -298,75 +316,108 @@ void onTick(CRules@ this)
     RunRoomLoaders(this);
 
     string pathline_key = this.exists("pathline_key") ? this.get_string("pathline_key") : "";
+    if (isServer() && getGameTime() == 30 && this.exists("update_hub_pos"))
+    {
+        Vec2f hub_pos = this.get_Vec2f("update_hub_pos");
+		CBlob@[] blobs;
+		map.getBlobsInBox(hub_pos, hub_pos + ROOM_SIZE, @blobs);
 
-    // developer localhost only, todo
-    if (isClient() && isServer())
+		for (uint i = 0; i < blobs.length; i++)
+		{
+			CBlob@ b = blobs[i];
+			b.Tag("room_loader_done");
+		}
+    }
+
+    PathlineTick(this, pathline_key);
+}
+
+void PathlineTick(CRules@ this, const string &in pathline_key)
+{
+    if (isServer())
+    {
+        for (u8 i = 0; i < getPlayersCount(); i++)
+        {
+            CPlayer@ p = getPlayer(i);
+            if (p is null) continue;
+
+            CBlob@[] personal_pathline;
+            if (!getBlobsByTag("personal_pathline_" + p.getNetworkID(), @personal_pathline))
+            {
+                CBlob@ pathline_blob = server_CreateBlob("pathline", -1, Vec2f(0,0));
+                if (pathline_blob !is null)
+                {
+                    pathline_blob.Tag("personal_pathline_" + p.getNetworkID());
+                    pathline_blob.set_u16("pathline_test_owner_id", p.getNetworkID());
+
+                    this.set_u16("pathline_test_blob_id", pathline_blob.getNetworkID());
+                    this.Sync("pathline_test_blob_id", true);
+                }
+            }
+        }
+    }
+
+    u8 pathline_state = this.get_u8("pathline_state");
+    u32 start_time = this.get_u32("pathline_start_time");
+    bool recording_pathline = this.get_bool("recording_pathline");
+    Vec2f recording_startpos = this.get_Vec2f("recording_startpos");
+
+    bool show_pathline = this.get_bool("enable_pathline");
+    u16 pathline_blob_id = this.get_u16("pathline_test_blob_id");
+
+    CBlob@ pblob = getBlobByNetworkID(pathline_blob_id);
+    if (pblob is null) return;
+
+    Vec2f player_pos = pblob.getPosition();
+    Vec2f player_old_pos = pblob.getOldPosition();
+
+    // manage controls & debug
+    if (isClient())
     {
         CControls@ controls = getControls();
         if (controls is null) return;
 
-        u8 pathline_state = this.get_u8("test_pathline_state");
-        u32 start_time = this.get_u32("test_pathline_start_time");
-        bool recording_pathline = this.get_bool("recording_pathline");
-        Vec2f recording_startpos = this.get_Vec2f("test_pathline_start_pos");
+        // toggle record on/off
+        if (isServer() && controls.isKeyJustPressed(KEY_MBUTTON)) // for localhost only
+        {
+            Sound::Play2D("ButtonClick.ogg", 1.0f, 1.5f);
 
-        bool show_pathline = this.get_bool("enable_pathline");
+            recording_pathline = !recording_pathline;
+            CBlob@ local_player_blob = getLocalPlayerBlob();
+            if (local_player_blob !is null)
+            {
+                recording_startpos = local_player_blob.getPosition();
+            }
+
+            //CBitStream params;
+            //params.write_bool(recording_pathline);
+            //params.write_Vec2f(recording_startpos);
+            //this.SendCommand(this.getCommandID("sync_pathline_to_server"), params);
+        }
+
         if (show_pathline)
         {
             // display
             if (controls.isKeyJustPressed(KEY_LCONTROL)) start_time = getGameTime();
             pathline_state = controls.isKeyPressed(KEY_LCONTROL) ? 1 : 0;
         }
+    }
 
-        CBlob@ pblob = getLocalPlayerBlob();
-        if (pblob is null) return;
-
-        Vec2f player_pos = pblob.getPosition();
-        Vec2f player_old_pos = pblob.getOldPosition();
-
-        // toggle record on/off
-        if (controls.isKeyJustPressed(KEY_MBUTTON))
-        {
-            Sound::Play2D("ButtonClick.ogg", 1.0f, 1.5f);
-            recording_pathline = !recording_pathline;
-            recording_startpos = player_pos;
-        }
-
-        // record player path (and optional grapple pos for archer)
+    bool is_archer = false;
+    if (isServer())
+    {
         if (recording_pathline)
         {
-            // snap to 0.1 precision
-            Vec2f rpos = Vec2f(Maths::Round((player_pos.x - recording_startpos.x) * 10.0f) / 10.0f,
-                               Maths::Round((player_pos.y - recording_startpos.y) * 10.0f) / 10.0f);
-
-            Vec2f rold = Vec2f(Maths::Round((player_old_pos.x - recording_startpos.x) * 10.0f) / 10.0f,
-                                Maths::Round((player_old_pos.y - recording_startpos.y) * 10.0f) / 10.0f);
-
-            player_pos = rpos;
-            player_old_pos = rold;
-
-            // prepare grapple value (relative) if archer
-            bool is_archer = (pblob.getName() == "archer");
-            Vec2f grapple_rel = Vec2f(0,0);
-            if (is_archer)
+            CBlob@ local_player_blob = getLocalPlayerBlob();
+            if (local_player_blob !is null)
             {
-                Vec2f gpos = this.get_Vec2f("grapple_pos");
-                grapple_rel = Vec2f(Maths::Round((gpos.x - recording_startpos.x) * 10.0f) / 10.0f,
-                                    Maths::Round((gpos.y - recording_startpos.y) * 10.0f) / 10.0f);
+                player_pos = local_player_blob.getPosition();
+                player_old_pos = local_player_blob.getOldPosition();
+
+                is_archer = local_player_blob.getName() == "archer";
             }
 
-            if (player_pos != player_old_pos || pblob.isKeyPressed(key_action1) || pblob.isKeyPressed(key_action2))
-            {
-                u32 packed = PackVec2f(player_pos);
-                cached_positions.push_back("" + packed); // main pos
-
-                // if archer, also store grapple pos right after main pos
-                if (is_archer)
-                {
-                    u32 packed_grapple = PackVec2f(grapple_rel);
-                    cached_positions.push_back("" + packed_grapple);
-                }
-            }
+            RecordPathline(this, local_player_blob, recording_startpos, player_pos, player_old_pos);
         }
         // replay recorded path (now stored as pairs when archer)
         else if (pathline_state == 1)
@@ -374,9 +425,9 @@ void onTick(CRules@ this)
             int diff = getGameTime() - start_time;
             if (positions_str.length <= 0) return;
 
-            // If positions were stored as pairs (archer), treat entries as pairs count.
+            // if positions were stored as pairs (archer), treat entries as pairs count.
             int entries = positions_str.length;
-            bool pairs_mode = (entries % 2 == 0 && entries >= 2);
+            bool pairs_mode = !is_archer && (entries % 2 == 0 && entries >= 2);
             int frames = pairs_mode ? entries / 2 : entries;
 
             if (frames <= 0) return;
@@ -414,114 +465,170 @@ void onTick(CRules@ this)
 
                 if (ok)
                 {
-                    u32 packed = u32(parsed);
-                    Vec2f room_pos = this.get_Vec2f("current_room_pos");
+                    RunPathline(this, pblob, parsed, has_old, old_parsed, grapple_parsed);
+                }
+            }
+        }
+    }
 
-                    Vec2f pos = UnpackVec2f(packed);
-                    Vec2f oldpos = has_old ? UnpackVec2f(u32(old_parsed)) : Vec2f(0,0);
+    // save when recording stops
+    bool stopped_recording = !recording_pathline && this.get_bool("recording_pathline");
+    if (stopped_recording) print(cached_positions.length + " positions recorded for pathline key " + pathline_key);
+    if (stopped_recording && cached_positions.length > 0)
+    {
+        if (pathline_cfg.exists(pathline_key)) pathline_cfg.remove(pathline_key);
+        pathline_cfg.addArray_string(pathline_key, cached_positions);
+        pathline_cfg.saveFile("parkour_pathlines.cfg");
 
-                    bool exists_anchor_pos = this.exists("current_anchor_pos");
-                    Vec2f anchor_pos = exists_anchor_pos ? this.get_Vec2f("current_anchor_pos") : Vec2f(0,0);
-                    Vec2f anchor_offset_to_room = exists_anchor_pos ? anchor_pos : Vec2f(0,0);
+        print("[INF] Saved pathline with " + cached_positions.length + " positions to key " + pathline_key);
+        cached_positions.clear();
 
-                    // ensure at least one particle even if pos == oldpos
-                    u32 quantity = 1;
-                    if (has_old)
+        // update cfg_loaded and pathline_key, then set positions_str
+        UpdatePathlineData(this);
+    }
+
+    this.set_u8("pathline_state", pathline_state);
+    this.set_u32("pathline_start_time", start_time);
+    this.set_bool("recording_pathline", recording_pathline);
+    this.set_Vec2f("recording_startpos", recording_startpos);
+}
+
+void RunPathline(CRules@ this, CBlob@ pblob, int parsed, bool has_old, int old_parsed, int grapple_parsed)
+{
+    u32 packed = u32(parsed);
+    Vec2f room_pos = this.get_Vec2f("current_room_pos");
+
+    Vec2f pos = UnpackVec2f(packed);
+    Vec2f oldpos = has_old ? UnpackVec2f(u32(old_parsed)) : Vec2f(0,0);
+
+    bool exists_anchor_pos = this.exists("current_anchor_pos");
+    Vec2f anchor_pos = exists_anchor_pos ? this.get_Vec2f("current_anchor_pos") : Vec2f(0, 0);
+    Vec2f anchor_offset_to_room = exists_anchor_pos ? anchor_pos : Vec2f(0, 0);
+    Vec2f endpos = pos + room_pos + anchor_offset_to_room;
+
+    Vec2f gpos_rel = grapple_parsed != -1 ? UnpackVec2f(u32(grapple_parsed)) + anchor_offset_to_room : endpos;
+    Vec2f gpos = gpos_rel;
+
+    // particles
+    // ensure at least one particle even if pos == oldpos
+    u32 quantity = 1;
+    if (has_old)
+    {
+        int raw = Maths::Ceil((pos - oldpos).Length());
+        quantity = raw > 0 ? u32(raw) : 1;
+    }
+
+    if (isClient())
+    {
+        for (u32 i = 0; i < quantity; i++)
+        {
+            f32 t = quantity > 1 ? f32(i) / f32(quantity - 1) : 0.0f;
+            Vec2f interp = has_old ? oldpos + (pos - oldpos) * t : pos;
+
+            // world position for this particle (trail)
+            interp += anchor_offset_to_room;
+            int time = 30;
+
+            // determine world end position (current player pos)
+            Vec2f world_endpos = endpos; // already includes room_pos and anchor offset
+
+            // draw grapple line (only once per frame, from endpos to grapple pos)
+            if (grapple_parsed != -1 && grapple_parsed != parsed && i == quantity - 1)
+            {
+                Vec2f dir = gpos - world_endpos;
+                f32 dist = dir.Length();
+                if (dist > 16.0f)
+                {
+                    // particle spacing: roughly one particle per 8 pixels (tweak as needed)
+                    f32 spacing = 1.0f;
+                    u32 line_qty = u32(Maths::Ceil(dist / spacing));
+                    if (line_qty == 0) line_qty = 1;
+
+                    for (u32 j = 0; j < line_qty; j++)
                     {
-                        int raw = Maths::Ceil((pos - oldpos).Length());
-                        quantity = raw > 0 ? u32(raw) : 1;
-                    }
+                        f32 tt = line_qty > 1 ? f32(j) / f32(line_qty - 1) : 0.0f;
+                        Vec2f at = world_endpos + dir * tt;
+                        u8 ctime = Maths::Max(2, tt * 1);
 
-                    for (u32 i = 0; i < quantity; i++)
-                    {
-                        f32 t = quantity > 1 ? f32(i) / f32(quantity - 1) : 0.0f;
-                        Vec2f interp = has_old ? oldpos + (pos - oldpos) * t : pos;
-
-                        // world position for this particle
-                        interp += anchor_offset_to_room;
-                        int time = 60;
-
-                        // if there is a grapple position for this frame, draw a line of small particles between interp and grapple
-                        if (grapple_parsed != -1)
+                        CParticle@ lp = ParticleAnimated("PathlineCursorGrapple.png", at, Vec2f(0,0), 0, 0, ctime, 0.0f, true);
+                        if (lp !is null)
                         {
-                            Vec2f gpos_rel = UnpackVec2f(u32(grapple_parsed));
-                            Vec2f gpos = gpos_rel + anchor_offset_to_room;
-
-                            Vec2f dir = gpos - interp;
-                            f32 dist = dir.Length();
-                            if (dist > 16.0f)
-                            {
-                                // particle spacing: roughly one particle per 8 pixels (tweak as needed)
-                                f32 spacing = 1.0f;
-                                u32 line_qty = u32(Maths::Ceil(dist / spacing));
-                                if (line_qty == 0) line_qty = 1;
-
-                                for (u32 j = 0; j < line_qty; j++)
-                                {
-                                    f32 tt = line_qty > 1 ? f32(j) / f32(line_qty - 1) : 0.0f;
-                                    Vec2f at = interp + dir * tt;
-
-                                    CParticle@ lp = ParticleAnimated("PathlineCursorGrapple.png", at, Vec2f(0,0), 0, 0, 3, 0.0f, true);
-                                    if (lp !is null)
-                                    {
-                                        lp.gravity = Vec2f(0, 0);
-                                        lp.scale = 0.25f;
-                                        lp.timeout = 3;
-                                        lp.growth = -0.01f;
-                                        lp.deadeffect = -1;
-                                        lp.collides = false;
-                                        lp.Z = 50.0f;
-
-                                        // slightly different color for grapple line (blueish-ish)
-                                        f32 sin2 = Maths::Sin((getGameTime() + j) * 0.12f) * 0.5f + 0.5f;
-                                        SColor lcol = SColor(255, 255 - sin2 * 40, 255 - sin2 * 80, 255 - sin2 * 40);
-                                        lp.colour = lcol;
-                                        lp.forcecolor = lcol;
-                                    }
-                                }
-                            }
-                        }
-
-                        // main particle (represents the path point/player)
-                        CParticle@ p = ParticleAnimated("PathlineCursor.png", interp, Vec2f(0,0), 0, 0, time, 0.0f, true);
-                        if (p !is null)
-                        {
-                            p.gravity = Vec2f(0, 0);
-                            p.scale = 0.75f;
-                            p.timeout = time;
-                            p.growth = -0.05f;
-                            p.deadeffect = -1;
-                            p.collides = false;
-
-                            f32 sin = Maths::Sin(getGameTime() * 0.1f) * 0.5f + 0.5f;
-                            SColor col = SColor(255, 255 - sin * 85, 255 - sin * 25, 255 - sin * 85);
-                            p.colour = col;
-                            p.forcecolor = col;
+                            lp.fastcollision = true;
+                            lp.gravity = Vec2f(0, 0);
+                            lp.scale = 0.25f;
+                            lp.growth = -0.01f;
+                            lp.deadeffect = -1;
+                            lp.collides = false;
+                            lp.Z = 50.0f;
                         }
                     }
                 }
             }
-        }
 
-        // save when recording stops
-        bool stopped_recording = !recording_pathline && this.get_bool("recording_pathline");
-        if (stopped_recording && cached_positions.length > 0)
+            // main particle: use endpos for the current position (put trail particles at interp, final one at endpos)
+            Vec2f particle_pos = (i == quantity - 1) ? world_endpos : interp;
+
+            CParticle@ p = ParticleAnimated("PathlineCursor.png", particle_pos, Vec2f(0,0), 0, 0, time, 0.0f, true);
+            if (p !is null)
+            {
+                p.fastcollision = true;
+                p.gravity = Vec2f(0, 0);
+                p.scale = 0.75f;
+                p.growth = -0.05f;
+                p.deadeffect = -1;
+                p.collides = false;
+
+                f32 sin = Maths::Sin(getGameTime() * 0.1f) * 0.5f + 0.5f;
+                SColor col = SColor(255, 255 - sin * 85, 255 - sin * 25, 255 - sin * 85);
+                p.colour = col;
+                p.forcecolor = col;
+            }
+        }
+    }
+
+    // update vars
+    if (isServer())
+    {
+        pblob.setPosition(endpos);
+        pblob.setAimPos(gpos);
+    }
+}
+
+void RecordPathline(CRules@ this, CBlob@ local_player_blob, Vec2f recording_startpos,
+                    Vec2f player_pos, Vec2f player_old_pos)
+{
+    // snap to 0.1 precision
+    Vec2f rpos = Vec2f(Maths::Round((player_pos.x - recording_startpos.x) * 10.0f) / 10.0f,
+                       Maths::Round((player_pos.y - recording_startpos.y) * 10.0f) / 10.0f);
+
+    Vec2f rold = Vec2f(Maths::Round((player_old_pos.x - recording_startpos.x) * 10.0f) / 10.0f,
+                        Maths::Round((player_old_pos.y - recording_startpos.y) * 10.0f) / 10.0f);
+
+    player_pos = rpos;
+    player_old_pos = rold;
+
+    // prepare grapple value (relative) if archer
+    bool is_archer = (local_player_blob.getName() == "archer");
+    Vec2f grapple_rel = Vec2f(0,0);
+
+    if (is_archer)
+    {
+        Vec2f gpos = this.get_Vec2f("grapple_pos");
+        grapple_rel = Vec2f(Maths::Round((gpos.x - recording_startpos.x) * 10.0f) / 10.0f,
+                            Maths::Round((gpos.y - recording_startpos.y) * 10.0f) / 10.0f);
+    }
+
+    if (player_pos != player_old_pos || local_player_blob.isKeyPressed(key_action1) || local_player_blob.isKeyPressed(key_action2))
+    {
+        u32 packed = PackVec2f(player_pos);
+        cached_positions.push_back("" + packed); // main pos
+
+        // if archer, also store grapple pos right after main pos
+        if (is_archer)
         {
-            if (pathline_cfg.exists(pathline_key)) pathline_cfg.remove(pathline_key);
-            pathline_cfg.addArray_string(pathline_key, cached_positions);
-            pathline_cfg.saveFile("parkour_pathlines.cfg");
-
-            print("[INF] Saved pathline with " + cached_positions.length + " positions to key " + pathline_key);
-            cached_positions.clear();
-
-            // update cfg_loaded and pathline_key, then set positions_str
-            UpdatePathlineData(this);
+            u32 packed_grapple = PackVec2f(grapple_rel);
+            cached_positions.push_back("" + packed_grapple);
         }
-
-        this.set_u8("test_pathline_state", pathline_state);
-        this.set_u32("test_pathline_start_time", start_time);
-        this.set_bool("recording_pathline", recording_pathline);
-        this.set_Vec2f("test_pathline_start_pos", recording_startpos);
     }
 }
 

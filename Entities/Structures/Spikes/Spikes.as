@@ -83,7 +83,7 @@ void tileCheck(CBlob@ this, CMap@ map, Vec2f pos, f32 angle, facing_direction se
 
 void onTick(CBlob@ this)
 {
-	if (this.hasTag("room_loader_init") && !this.hasTag("room_loader_done"))
+	if (isServer() && this.hasTag("room_loader_init") && !this.hasTag("room_loader_done"))
 	{
 		return;
 	}

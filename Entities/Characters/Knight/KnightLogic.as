@@ -9,9 +9,7 @@
 #include "Help.as";
 #include "Requirements.as"
 
-
 //attacks limited to the one time per-actor before reset.
-
 void knight_actorlimit_setup(CBlob@ this)
 {
 	u16[] networkIDs;
@@ -1476,7 +1474,7 @@ void onHitBlob(CBlob@ this, Vec2f worldPoint, Vec2f velocity, f32 damage, CBlob@
 	}
 
 	if (customData == Hitters::sword &&
-	        ( //is a jab - note we dont have the dmg in here at the moment :/
+	        ( // is a jab - note we dont have the dmg in here at the moment :/
 	            knight.state == KnightStates::sword_cut_mid ||
 	            knight.state == KnightStates::sword_cut_mid_down ||
 	            knight.state == KnightStates::sword_cut_up ||
@@ -1495,10 +1493,7 @@ void onHitBlob(CBlob@ this, Vec2f worldPoint, Vec2f velocity, f32 damage, CBlob@
 	}
 }
 
-
-
 // bomb pick menu
-
 void onCreateInventoryMenu(CBlob@ this, CBlob@ forBlob, CGridMenu @gridmenu)
 {
 	if (bombTypeNames.length == 0)

@@ -4,15 +4,13 @@
 
 bool onMapTileCollapse(CMap@ map, u32 offset)
 {
-	if(isDummyTile(map.getTile(offset).type))
+	CBlob@ blob = getBlobByNetworkID(server_getDummyGridNetworkID(offset));
+	if (blob !is null)
 	{
-		CBlob@ blob = getBlobByNetworkID(server_getDummyGridNetworkID(offset));
-		if (blob !is null)
-		{
-			blob.server_Die();
-		}
+		blob.server_Die();
 	}
-	return true;
+
+	return false;
 }
 
 /*
@@ -23,10 +21,10 @@ TileType server_onTileHit(CMap@ this, f32 damage, u32 index, TileType oldTileTyp
 
 void onSetTile(CMap@ map, u32 index, TileType tile_new, TileType tile_old)
 {
+	map.SetTileSupport(index, 255);
+
 	if(isDummyTile(tile_new))
 	{
-		map.SetTileSupport(index, 10);
-
 		switch(tile_new)
 		{
 			case Dummy::SOLID:

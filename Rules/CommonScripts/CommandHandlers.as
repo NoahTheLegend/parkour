@@ -1,6 +1,29 @@
 #include "Helpers.as";
 #include "RoomsCommon.as";
 #include "RoomsHooks.as";
+#include "RoomsHandlers.as";
+
+// sends a command to the server to set the room for the player
+void sendRoomCommand(CRules@ rules, u16 pid, u8 type, int level_id, Vec2f pos)
+{
+    CBitStream params;
+    params.write_u16(pid); // player id
+    params.write_u8(type);
+    params.write_s32(level_id); // level id
+    params.write_Vec2f(ROOM_SIZE); // room size
+    params.write_Vec2f(pos); // start pos // todo: get from level data
+
+    if (isClient())
+    {
+        rules.SendCommand(rules.getCommandID("set_room"), params);
+        print("[CMD] Sent " + rules.getCommandID("set_room"));
+    }
+    else
+    {
+        print("[CMD] Executed SetRoomCommand directly on server");
+        BuildRoom(rules, pid, type, level_id, ROOM_SIZE, pos);
+    }
+}
 
 void CreateRoomsGridCommand(CRules@ this, CBitStream@ params)
 {
@@ -30,6 +53,9 @@ void CreateRoomsGridCommand(CRules@ this, CBitStream@ params)
 
 void SetRoomCommand(CRules@ this, CBitStream@ params)
 {
+    print("[CMD] SetRoomCommand called");
+    if (!isServer()) return;
+
     u16 pid;
     if (!params.saferead_u16(pid)) {print("[CMD] Failed to read player id"); return;}
 
@@ -45,6 +71,22 @@ void SetRoomCommand(CRules@ this, CBitStream@ params)
             return;
         }
         this.set_u32(user_call, getGameTime());
+
+        u16[]@ room_owners;
+        if (!this.get("room_owners", @room_owners)) {print("[CMD] Failed to get room owners"); return;}
+        
+        if (room_owners is null)
+        {
+            print("[CMD] Room owners not found");
+            return;
+        }
+    
+        if (room_owners.find(pid) == -1)
+        {
+            print("[VAL] Player " + pid + " tried to set a room they don't own");
+            SetClientMessage(pid, "You need to create a room before loading levels");
+            return;
+        }
     }
 
     u8 level_type;
@@ -59,39 +101,113 @@ void SetRoomCommand(CRules@ this, CBitStream@ params)
     Vec2f start_pos;
     if (!params.saferead_Vec2f(start_pos)) {print("[CMD] Failed to read start pos"); return;}
 
-    print("[INF] Loaded level " + level_id + " of type " + level_type + " with size " + room_size + " at pos " + start_pos);
+    // delegate main loading logic
+    BuildRoom(this, pid, level_type, level_id, room_size, start_pos);
+}
 
-    // set client vars
-    if (pid != 0)
+void SyncRoomCommand(CRules@ this, CBitStream@ params)
+{
+    if (!isClient()) return;
+
+    u16 pid;
+    if (!params.saferead_u16(pid)) {print("[CMD] Failed to read player id"); return;}
+
+    u8 level_type;
+    if (!params.saferead_u8(level_type)) {print("[CMD] Failed to read room type"); return;}
+
+    int level_id;
+    if (!params.saferead_s32(level_id)) {print("[CMD] Failed to read level id"); return;}
+
+    Vec2f room_size;
+    if (!params.saferead_Vec2f(room_size)) {print("[CMD] Failed to read room size"); return;}
+
+    Vec2f start_pos;
+    if (!params.saferead_Vec2f(start_pos)) {print("[CMD] Failed to read start pos"); return;}
+
+    Vec2f center_pos;
+    if (!params.saferead_Vec2f(center_pos)) {print("[CMD] Failed to read center pos"); return;}
+
+    s32 complexity;
+    if (!params.saferead_s32(complexity)) {print("[CMD] Failed to read complexity"); return;}
+
+    string level_type_name;
+    if (!params.saferead_string(level_type_name)) {print("[CMD] Failed to read level type name"); return;}
+
+    this.set_u8("current_level_type", level_type);
+    this.set_s32("current_level_id", level_id);
+
+    this.set_Vec2f("current_room_pos", start_pos);
+    this.set_Vec2f("current_room_size", room_size);
+    this.set_Vec2f("current_room_center", center_pos);
+
+    this.set_s32("current_complexity", complexity);
+    this.set_string("current_level_type_name", level_type_name);
+
+    print("[INF] Synced current room to " + level_id + " of type " + level_type + " at pos " + start_pos);
+}
+
+void RoomChatCommand(CRules@ this, CBitStream@ params)
+{
+    u16 pid;
+    if (!params.saferead_u16(pid)) {print("[CMD] Failed to read player id"); return;}
+
+    CPlayer@ player = getPlayerByNetworkId(pid);
+    if (player is null) return;
+
+    u8 count;
+    if (!params.saferead_u8(count)) {print("[CMD] Failed to read chat tokens count"); return;}
+
+    string[] tokens;
+    for (u8 i = 0; i < count; i++)
     {
-        CPlayer@ p = getPlayerByNetworkId(pid);
-        if (p !is null && p.isMyPlayer())
-        {
-            this.set_u8("current_level_type", level_type);
-            this.set_s32("current_level_id", level_id);
-
-            this.set_Vec2f("current_room_pos", start_pos);
-            this.set_Vec2f("current_room_size", room_size);
-            this.set_Vec2f("current_room_center", start_pos + room_size * 0.5f);
-            
-            this.set_s32("current_complexity", 0); // reset complexity
-            this.set_string("current_level_type_name", getFullTypeName(level_type));
-
-            print("[INF] Client: set current room to " + level_id + " of type " + level_type + " at pos " + start_pos);
-        }
+        string token;
+        if (!params.saferead_string(token)) {print("[CMD] Failed to read chat token"); continue;}
+        tokens.push_back(token);
     }
 
-    string file = level_type == RoomType::chess ? "ChessLevel.png" : GetRoomFile(level_type, level_id);
-    CFileImage fm(file);
-    if (!fm.isLoaded())
-    {
-        error("[ERR] Room file " + file + " not found, loading empty room");
-        file = "Maps/Hub.png";
+    u8 level_type = this.exists("current_level_type") ? this.get_u8("current_level_type") : 255;
+    int level_id = this.exists("current_level_id") ? this.get_s32("current_level_id") : -1;
+	Vec2f level_pos = this.exists("current_room_pos") ? this.get_Vec2f("current_room_pos") : Vec2f_zero;
+
+	if (level_type != 255 && level_id != -1)
+	{
+		if (tokens[0] == "!n" || tokens[0] == "!next" || tokens[0] == "!skip")
+		{
+			sendRoomCommand(this, player.getNetworkID(), level_type, level_id + 1, level_pos);
+		}
+		else if (tokens[0] == "!p" || tokens[0] == "!prev" || tokens[0] == "!previous")
+		{
+			if (level_id > 0) sendRoomCommand(this, player.getNetworkID(), level_type, level_id - 1, level_pos);
+		}
+		else if (tokens[0] == "!r" || tokens[0] == "!rs" || tokens[0] == "!restart")
+		{
+			sendRoomCommand(this, player.getNetworkID(), level_type, level_id, level_pos);
+		}
     }
 
-    EraseRoom(this, start_pos, room_size); // tag for room creation
-    CreateRoomFromFile(this, file, start_pos, pid);
-    onRoomCreated(this, level_type, level_id, pid);
+    if (tokens.size() >= 2)
+    {
+        int type = 0;
+		int requestedLevelId = parseInt(tokens[1]);
+		if (requestedLevelId >= 0)
+		{
+			if (tokens.size() == 3)
+			{
+				string class_token = tokens[2];
+				if (class_token == "k" || class_token == "kn" || class_token == "knight")
+				{
+					type = RoomType::knight;
+				}
+				else if (class_token == "a" || class_token == "ar" || class_token == "archer")
+				{
+					type = RoomType::archer;
+				}
+				else type = parseInt(class_token);
+			}
+
+			sendRoomCommand(this, player.getNetworkID(), type, requestedLevelId, level_pos);
+		}
+    }
 }
 
 void CreateRoomCommand(CRules@ this, CBitStream@ params)
@@ -226,4 +342,9 @@ void ClientMessageCommand(CRules@ this, CBitStream@ params)
     this.set_u32("_client_message_time", getGameTime());
     this.set_string("_client_message", wrapped);
     this.set_Vec2f("_client_message_size", pane_size);
+}
+
+void SyncPathlineToServerCommand(CRules@ this, CBitStream@ params)
+{
+    if (!isServer()) return;
 }

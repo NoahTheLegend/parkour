@@ -8,9 +8,12 @@ void onInit(CRules@ this)
 	this.addCommandID("create_rooms_grid");
 	this.addCommandID("set_room");
 	this.addCommandID("create_room");
+	this.addCommandID("sync_room");
 	this.addCommandID("sync_room_owners");
 	this.addCommandID("editor");
 	this.addCommandID("set_client_message");
+	this.addCommandID("room_chatcommand");
+	this.addCommandID("sync_pathline_to_server");
 	
 	LoadDefaultMapLoaders();
 	LoadDefaultGUI();

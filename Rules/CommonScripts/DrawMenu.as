@@ -4,6 +4,7 @@
 #include "KGUI.as";
 #include "Listeners.as";
 #include "RoomsCommon.as";
+#include "CommandHandlers.as";
 #include "PseudoVideoPlayer.as";
 
 const Vec2f menuSize = Vec2f(720, 480);
@@ -93,7 +94,7 @@ void LoadLevels()
 void LoadClassLevels(const string &in dir, const string &in filePrefix, Rectangle@ slider, const SColor &in rectColor, const string &in logName, uint &out level_count)
 {
 	level_count = 0;
-	for (uint i = 0; i < 512; i++)
+	for (uint i = 0; i < 256; i++)
 	{
 		string path = CFileMatcher(dir + filePrefix + i + ".png").getFirst();
 		if (path == "") break;
@@ -321,16 +322,15 @@ void InitializeGUI(CRules@ this)
 	@mainFrame = @Rectangle(framePos, frameSize, SColor(0, 0, 0, 0));
 	mainFrame.name = "mainFrame";
 	mainFrame.setLevel(ContainerLevel::PAGE_FRAME);
+	mainFrame.isEnabled = false;
 	menuWindow.addChild(mainFrame);
 
 	Label@ title = @Label(Vec2f(mainFrame.size.x / 2, 4), Vec2f(frameSize.x - 12, 16), "", SColor(255, 0, 0, 0), true, "Terminus_18");
 	title.name = "title";
-	title.setText(title.textWrap("Welcome to the Parkour Mod!", "Terminus_18"));
 	mainFrame.addChild(title);
 
 	Label@ subtitle = @Label(Vec2f(8, 26), Vec2f(frameSize.x - 12, 16), "", SColor(255, 0, 0, 0), false, "Terminus_14");
 	subtitle.name = "subtitle";
-	subtitle.setText(subtitle.textWrap("CONTROLS - check game settings for binding names\n\n[Build Modifier] or  [SHIFT]        - Teleport\n[Mark Player]    or  [R]            - Teleport to Anchor\n[Build Modifier] +   [Mark Player]  - Replace Anchor\n[Left Control]                      - Show pathline\n\n\n* Open the Levels section to create a room, white square will highlight it. You can't create one if all slots are occupied\n\n* Load a level into your room to start\n\n* Navigate through the menu for more info", "Terminus_14"));
 	mainFrame.addChild(subtitle);
 
 	// switchers
@@ -353,7 +353,7 @@ void InitializeGUI(CRules@ this)
 
 	@infoFrame = @Rectangle(mainFrame.localPosition, mainFrame.size, mainFrame.color);
 	infoFrame.name = "infoFrame";
-	infoFrame.isEnabled = false;
+	infoFrame.isEnabled = true;
 	menuWindow.addChild(infoFrame);
 
 	Label@ infoTitle = @Label(title.localPosition, title.size, "", SColor(255, 0, 0, 0), true, title.font);
@@ -363,7 +363,7 @@ void InitializeGUI(CRules@ this)
 
 	Label@ infoSubtitle = @Label(subtitle.localPosition, subtitle.size, "", SColor(255, 0, 0, 0), false, subtitle.font);
 	infoSubtitle.name = "subtitle";
-	infoSubtitle.setText(infoSubtitle.textWrap("CONTROLS - check game settings for binding names\n\n[Build Modifier] or  [SHIFT]        - Teleport\n[Mark Player]    or  [R]            - Teleport to Anchor\n[Build Modifier] +   [Mark Player]  - Replace Anchor\n[Left Control]                      - Show pathline\n\n\n* Each of the official levels is possible to complete\n\nSome levels, though, require you to know theory and the moveset.\n\n* Watch particular videos in \"Help\" section if you are stuck\n\n* Tiles and background tiles have different properties for classes, for example, a knight won't be able to slide or slash while inside the background", subtitle.font));
+	infoSubtitle.setText(infoSubtitle.textWrap("CONTROLS - check game settings for binding names\n\n[Build Modifier] or  [SHIFT]        - Teleport\n[Mark Player]    or  [R]            - Teleport to Anchor\n[Build Modifier] +   [Mark Player]  - Replace Anchor\n[Left Control]                      - Show pathline\n\nCHAT COMMANDS: !next (!n), !prev (!p), !restart (!r), !level [id] [class]\n\n\n* Open the Levels section to create a room, white square will highlight it. You can't create one if all slots are occupied\n\nChat \n\n* Load a level into your room to start\n\n* Tiles and background tiles have different properties, for example, a knight won't be able to slide or slash while inside any background\n\n* Navigate through the menu for more info\n\n* Each of the official levels is possible to complete\n\nSome levels, though, require you to know theory and the moveset\n\n* Watch particular videos in \"Help\" section if you are stuck", subtitle.font));
 	infoFrame.addChild(infoSubtitle);
 
 	Vec2f scrollerLeftPos = Vec2f(10, 25);
@@ -386,7 +386,7 @@ void InitializeGUI(CRules@ this)
 
 	Label@ helpTitle = @Label(title.localPosition, title.size, "", SColor(255, 0, 0, 0), true, title.font);
 	helpTitle.name = "title";
-	helpTitle.setText(helpTitle.textWrap("Hover on the videos to watch them (A/D) [01]", title.font));
+	helpTitle.setText(helpTitle.textWrap("(WIP) Hover on the videos to watch them (A/D) [01]", title.font));
 	helpFrame.addChild(helpTitle);
 
 	// slider and scrollers
@@ -687,7 +687,7 @@ void AddSettings(CRules@ this, Rectangle@ settingsFrame)
 
 	// continuous teleport
 	bool continuous_teleport = this.get_bool("continuous_teleport");
-	Button@ continuousTeleportToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Continuous teleport: " + (continuous_teleport ? "YES" : "NO"), SColor(255, 255, 255, 255));
+	Button@ continuousTeleportToggle = @Button(Vec2f(10, prevHeight), buttonSize, "Immediate teleport: " + (continuous_teleport ? "YES" : "NO"), SColor(255, 255, 255, 255));
 	continuousTeleportToggle.name = "continuousTeleportToggle";
 	continuousTeleportToggle.selfLabeled = true;
 	continuousTeleportToggle.rectColor = SColor(255, 255, 115, 55);
@@ -748,7 +748,7 @@ void UpdateSettings(CRules@ this)
 	{
 		bool continuous_teleport = continuousTeleportToggle.toggled;
 		this.set_bool("continuous_teleport", continuous_teleport);
-		continuousTeleportToggle.desc = "Continuous teleport: " + (continuous_teleport ? "YES" : "NO");
+		continuousTeleportToggle.desc = "Immediate teleport: " + (continuous_teleport ? "YES" : "NO");
 	}
 
 	Button@ closeOnRoomSelectToggle = cast<Button@>(settingsFrame.getChild("closeOnRoomSelectToggle"));

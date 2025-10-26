@@ -357,7 +357,7 @@ class RoomPNGLoader
 			case map_colors::alpha_ladder:          autotile(offset); spawnBlob(map, player_id, "ladder",          getTeamFromChannel(alpha), position, getAngleFromChannel(alpha), true); break;
 			case map_colors::alpha_spikes:          autotile(offset); spawnBlob(map, player_id, "spikes",          getTeamFromChannel(alpha), position,                             true); break;
 			case map_colors::alpha_stone_door:      autotile(offset); spawnBlob(map, player_id, "stone_door",      getTeamFromChannel(alpha), position, getAngleFromChannel(alpha), true); break;
-			case map_colors::alpha_trap_block:      autotile(offset); spawnBlob(map, player_id, "trap_block",      getTeamFromChannel(alpha), position,                             true); break;
+			case map_colors::alpha_trap_block:      				  spawnBlob(map, player_id, "trap_block",      getTeamFromChannel(alpha), position,                             true); break;
 			case map_colors::alpha_bridge:          autotile(offset); spawnBlob(map, player_id, "bridge",      	   getTeamFromChannel(alpha), position,                             true); break;
 			case map_colors::alpha_wooden_door:     autotile(offset); spawnBlob(map, player_id, "wooden_door",     getTeamFromChannel(alpha), position, getAngleFromChannel(alpha), true); break;
 			case map_colors::alpha_wooden_platform: autotile(offset); spawnBlob(map, player_id, "wooden_platform", getTeamFromChannel(alpha), position, getAngleFromChannel(alpha), true); break;
@@ -566,9 +566,9 @@ class RoomPNGLoader
 			case map_colors::stone_door_v_noteam:  autotile(offset); spawnBlob(map, player_id, "stone_door",  offset, 255, true, Vec2f_zero, 90); break;
 
 			// Trapblocks
-			case map_colors::trapblock_blue:   autotile(offset); spawnBlob(map, player_id, "trap_block", offset,   0, true); break;
-			case map_colors::trapblock_red:    autotile(offset); spawnBlob(map, player_id, "trap_block", offset,   1, true); break;
-			case map_colors::trapblock_noteam: autotile(offset); spawnBlob(map, player_id, "trap_block", offset, 255, true); break;
+			case map_colors::trapblock_blue:   spawnBlob(map, player_id, "trap_block", offset,   0, true); break;
+			case map_colors::trapblock_red:    spawnBlob(map, player_id, "trap_block", offset,   1, true); break;
+			case map_colors::trapblock_noteam: spawnBlob(map, player_id, "trap_block", offset, 255, true); break;
 
 			// Trap Bridges
 			case map_colors::bridge_blue:   autotile(offset); spawnBlob(map, player_id, "bridge", offset,   0, true); break;
@@ -576,7 +576,7 @@ class RoomPNGLoader
 			case map_colors::bridge_noteam: autotile(offset); spawnBlob(map, player_id, "bridge", offset, 255, true); break;
 
 			// Spikes
-			case map_colors::spikes:  offsets[spike_offset].push_back(offset); break;
+			case map_colors::spikes:  		offsets[spike_offset].push_back(offset); break;
 			case map_colors::spikes_ground: offsets[spike_offset].push_back(offset); map.SetTile(offset, CMap::tile_ground_back); break;
 			case map_colors::spikes_castle: offsets[spike_offset].push_back(offset); map.SetTile(offset, CMap::tile_castle_back); break;
 			case map_colors::spikes_wood:   offsets[spike_offset].push_back(offset); map.SetTile(offset, CMap::tile_wood_back);   break;
@@ -594,6 +594,7 @@ class RoomPNGLoader
 					trampoline.Tag("no pickup");
 					trampoline.setPosition(getSpawnPosition(map, offset));
 					trampoline.Init();
+					trampoline.AddScript("WaitForRoomLoader.as");
 				}
 			}
 			break;
@@ -753,14 +754,15 @@ class RoomPNGLoader
 	}
 }
 
-void PlaceMostLikelyTile(CMap@ map, int offset)
+void PlaceMostLikelyTile(CMap@ map, int _offset)
 {
-	const TileType up = map.getTile(offset - map.tilemapwidth).type;
-	const TileType down = map.getTile(offset + map.tilemapwidth).type;
-	const TileType left = map.getTile(offset - 1).type;
-	const TileType right = map.getTile(offset + 1).type;
+	const TileType up = map.getTile(_offset - map.tilemapwidth).type;
+	const TileType down = map.getTile(_offset + map.tilemapwidth).type;
+	const TileType left = map.getTile(_offset - 1).type;
+	const TileType right = map.getTile(_offset + 1).type;
 
 	const TileType[] neighborhood = { up, down, left, right };
+	Vec2f offset = map.getTileWorldPosition(_offset);
 
 	// improved placement: pick back-type based on neighboring solidity and opposite-side type.
 	{
@@ -781,36 +783,36 @@ void PlaceMostLikelyTile(CMap@ map, int offset)
 		bool rightGround = (right == CMap::tile_ground || right == CMap::tile_ground_back);
 
 		// neighbor solidity (use map's definition)
-		bool upSolid    = map.isTileSolid(map.getTile(offset - map.tilemapwidth));
-		bool downSolid  = map.isTileSolid(map.getTile(offset + map.tilemapwidth));
-		bool leftSolid  = map.isTileSolid(map.getTile(offset - 1));
-		bool rightSolid = map.isTileSolid(map.getTile(offset + 1));
-
+		bool upSolid    = map.isTileSolid(map.getTile(_offset - map.tilemapwidth));
+		bool downSolid  = map.isTileSolid(map.getTile(_offset + map.tilemapwidth));
+		bool leftSolid  = map.isTileSolid(map.getTile(_offset - 1));
+		bool rightSolid = map.isTileSolid(map.getTile(_offset + 1));
+		
 		// If any axis has a solid neighbor on one side and a known-type neighbor on the opposite side,
 		// choose the opposite side's back-type. This implements "use top type if bottom is solid" and
 		// the analogous horizontal behavior (e.g. left solid + right is wood_back => use wood_back).
 		if ((downSolid && upCastle) || (upSolid && downCastle) || (leftSolid && rightCastle) || (rightSolid && leftCastle))
 		{
-			map.SetTile(offset, CMap::tile_castle_back);
+			map.server_SetTile(offset, CMap::tile_castle_back);
 			return;
 		}
 
 		if ((downSolid && upWood) || (upSolid && downWood) || (leftSolid && rightWood) || (rightSolid && leftWood))
 		{
-			map.SetTile(offset, CMap::tile_wood_back);
+			map.server_SetTile(offset, CMap::tile_wood_back);
 			return;
 		}
 
 		if ((downSolid && upGround) || (upSolid && downGround) || (leftSolid && rightGround) || (rightSolid && leftGround))
 		{
-			map.SetTile(offset, CMap::tile_ground_back);
+			map.server_SetTile(offset, CMap::tile_ground_back);
 			return;
 		}
 	}
 
 	if (map.isTileSolid(down) && (map.isTileGrass(left) || map.isTileGrass(right)))
 	{
-		map.SetTile(offset, CMap::tile_grass + 2 + map_random.NextRanged(2));
+		map.server_SetTile(offset, CMap::tile_grass + 2 + map_random.NextRanged(2));
 	}
 }
 

@@ -1,9 +1,9 @@
 #include "MakeSeed.as";
 #include "MakeCrate.as";
 #include "MakeScroll.as";
-#include "BasePNGLoader.as";
-#include "LoadWarPNG.as";
+#include "CommandHandlers.as";
 #include "RoomsHandlers.as";
+#include "RoomsCommon.as";
 
 const string CHAT_CHANNEL_PROP = "client_channel";
 void onInit(CRules@ this)
@@ -336,36 +336,21 @@ bool onServerProcessChat(CRules@ this,const string& in text_in,string& out text_
 		string[]@ tokens = text_in.split(" ");
 		if (tokens.length > 0)
 		{
-			u8 level_type = this.exists("current_level_type") ? this.get_u8("current_level_type") : 255;
-            int level_id = this.exists("current_level_id") ? this.get_s32("current_level_id") : -1;
-			Vec2f level_pos = this.exists("current_room_pos") ? this.get_Vec2f("current_room_pos") : Vec2f_zero;
-
-			if (level_type != 255 && level_id != -1)
+			// navigation commands
+			if (tokens[0] == "!n" || tokens[0] == "!next" || tokens[0] == "!skip"
+				|| tokens[0] == "!p" || tokens[0] == "!prev" || tokens[0] == "!previous"
+				|| tokens[0] == "!r" || tokens[0] == "!rs" || tokens[0] == "!restart"
+				|| tokens[0] == "!l" || tokens[0] == "!level" || tokens[0] == "!lv" || tokens[0] == "!lvl")
 			{
-				// navigation commands
-				if (tokens[0] == "!n" || tokens[0] == "!next" || tokens[0] == "!skip")
+				CBitStream params;
+				params.write_u16(player.getNetworkID());
+				params.write_u8(tokens.size());
+				for (u8 i = 0; i < tokens.size(); i++)
 				{
-					sendRoomCommand(this, level_type, level_id + 1, level_pos);
+					params.write_string(tokens[i]);
 				}
-				else if (tokens[0] == "!p" || tokens[0] == "!prev" || tokens[0] == "!previous")
-				{
-					if (level_id > 0) sendRoomCommand(this, level_type, level_id - 1, level_pos);
-				}
-				else if (tokens[0] == "!r" || tokens[0] == "!rest" || tokens[0] == "!restart")
-				{
-					sendRoomCommand(this, level_type, level_id, level_pos);
-				}
-			}
 
-			if (tokens.size() >= 2 && (tokens[0] == "!l" || tokens[0] == "!level"))
-			{
-				int type = level_type;
-				int requestedLevelId = parseInt(tokens[1]);
-				if (requestedLevelId >= 0)
-				{
-					if (tokens.size() == 3) type = parseInt(tokens[2]);
-					sendRoomCommand(this, type, requestedLevelId, level_pos);
-				}
+				this.SendCommand(this.getCommandID("room_chatcommand"), params);
 			}
 
 			if (isMod || isCool)			//For at least moderators
@@ -860,7 +845,7 @@ bool onServerProcessChat(CRules@ this,const string& in text_in,string& out text_
 					getMap().SetDayTime(parseFloat(tokens[1]));
 					return false;
 				}
-				else if (tokens[0] == "!msg" ||tokens[0]=="!message") 
+				else if (tokens[0] == "!m" || tokens[0] == "!msg" || tokens[0]=="!message") 
 				{
 					for (u8 i = 0; i < getPlayersCount(); i++)
 					{
@@ -1325,21 +1310,4 @@ void onEnterChat(CRules@ this)
     params.write_u8(getChatChannel());
 	params.write_u16(local.getNetworkID());
     this.SendCommand(this.getCommandID("sync_chat_channel"), params);
-}
-
-void SetClientMessage(u16 pid, string msg)
-{
-    if (!isServer()) return;
-    if (pid == 0) return;
-
-    CRules@ rules = getRules();
-    if (rules is null) return;
-
-    CPlayer@ p = getPlayerByNetworkId(pid);
-    if (p is null) return;
-
-    CBitStream params;
-    params.write_u16(pid);
-    params.write_string(msg);
-    rules.SendCommand(rules.getCommandID("set_client_message"), params, p);
 }

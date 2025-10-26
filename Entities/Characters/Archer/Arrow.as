@@ -143,7 +143,7 @@ void onTick(CBlob@ this)
 
 		angle = (this.getVelocity()).Angle();
 		Pierce(this);   //map
-		if (isServer()) this.setAngleDegrees(-angle);
+		this.setAngleDegrees(-angle);
 
 		if (shape.vellen > 0.0001f)
 		{

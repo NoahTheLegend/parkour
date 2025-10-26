@@ -1,8 +1,8 @@
 #include "PseudoVideoPlayer.as";
 #include "Helpers.as";
-#include "RoomsCommon.as";
-#include "RoomsListeners.as";
+#include "RoomsCommon.as";;
 #include "RoomsHandlers.as";
+#include "CommandHandlers.as";
 
 // global menu switcher
 void menuSwitchListener(int x, int y, int button, IGUIItem@ sender)
@@ -58,12 +58,12 @@ void pageClickListener(int x, int y, int button, IGUIItem@ sender)
 
     if (name == "infoButton")
     {
-        infoFrame.isEnabled = !infoFrameEnabled;
+        infoFrame.isEnabled = true;
         at_least_one_enabled = infoFrame.isEnabled;
     }
     else if (name == "levelsButton")
     {
-        levelsFrame.isEnabled = !levelsFrameEnabled;
+        levelsFrame.isEnabled = true;
         at_least_one_enabled = levelsFrame.isEnabled;
 
         if (levelsFrame.isEnabled)
@@ -83,7 +83,7 @@ void pageClickListener(int x, int y, int button, IGUIItem@ sender)
     }
     else if (name == "helpButton")
     {
-        helpFrame.isEnabled = !helpFrameEnabled;
+        helpFrame.isEnabled = true;
         at_least_one_enabled = helpFrame.isEnabled;
 
         if (helpFrame.isEnabled)
@@ -105,12 +105,12 @@ void pageClickListener(int x, int y, int button, IGUIItem@ sender)
     }
     else if (name == "settingsButton")
     {
-        settingsFrame.isEnabled = !settingsFrameEnabled;
+        settingsFrame.isEnabled = true;
         at_least_one_enabled = settingsFrame.isEnabled;
     }
     else if (name == "chessInfoButton")
     {
-        chessInfoFrame.isEnabled = !chessInfoFrameEnabled;
+        chessInfoFrame.isEnabled = true;
         at_least_one_enabled = chessInfoFrame.isEnabled;
     }
 
@@ -361,7 +361,8 @@ void UpdateLevels(Rectangle@ slider, Vec2f grid)
 // click callback for loading a level
 void loadLevelClickListener(int x, int y, int button, IGUIItem@ sender)
 {
-    if (getLocalPlayer() is null) return;
+    CPlayer@ local = getLocalPlayer();
+    if (local is null) return;
 
     CRules@ rules = getRules();
     if (rules is null) return;
@@ -387,7 +388,7 @@ void loadLevelClickListener(int x, int y, int button, IGUIItem@ sender)
 
     Vec2f pos = getRoomPosFromID(room_id);
     print(spl[0]+" "+type);
-    sendRoomCommand(rules, type, level_id, pos);
+    sendRoomCommand(rules, local.getNetworkID(), type, level_id, pos);
 }
 
 // visual hover effect for level buttons

@@ -74,7 +74,7 @@ void onRender(CSprite@ this)
 	if (player !is null && player.getTeamNum() >= 0)
 	{
 		GUI::DrawIcon(iconsFilename, frame, Vec2f(16, 32), tl + Vec2f(8 + (slotsSize - 1) * 40, -16), 1.0f, player.getTeamNum());
-		makeWebsiteLink(Vec2f(15, 15), "Guides ", "https://www.youtube.com/playlist?list=PLEBLbNnH0gxFViieG6VQmoM6KMY3Cr1YT");
+		//makeWebsiteLink(Vec2f(15, 15), "Guides ", "https://www.youtube.com/playlist?list=PLEBLbNnH0gxFViieG6VQmoM6KMY3Cr1YT");
 	}
 
 	if (blob.isMyPlayer())

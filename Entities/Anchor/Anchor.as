@@ -1,5 +1,6 @@
 #include "RoomsCommon.as";
 #include "RoomsHandlers.as";
+#include "RoomsHooks.as";
 
 void onInit(CBlob@ this)
 {
@@ -69,14 +70,6 @@ void onTick(CBlob@ this)
 		params.write_Vec2f(blob_pos);
 		this.SendCommand(this.getCommandID("replace"), params);
 	}
-
-	u32 static = this.get_u32("set_static");
-	if (static > 0 && getGameTime() >= static)
-	{
-		this.setPosition(this.get_Vec2f("init_pos"));
-
-		this.set_u32("set_static", 0);
-	}
 }
 
 void onCommand(CBlob@ this, u8 cmd, CBitStream @params)
@@ -87,6 +80,7 @@ void onCommand(CBlob@ this, u8 cmd, CBitStream @params)
 		this.set_Vec2f("init_pos", pos);
 
 		this.set_u32("set_static", getGameTime() + 1);
+		this.setPosition(pos);
 	}
 }
 
