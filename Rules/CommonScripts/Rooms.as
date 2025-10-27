@@ -349,8 +349,7 @@ void onTick(CRules@ this)
                     params.write_u32(getGameTime());
                     params.write_u8(current_type);
                     personal_pathline_blob.SendCommand(personal_pathline_blob.getCommandID("switch"), params);
-
-                    Sound::Play2D("ButtonClick.ogg", 1.0f, 1.5f);
+                    Sound::Play2D("ButtonClick.ogg", 1.0f, 1.0f);
                 }
             }
         }
@@ -489,68 +488,71 @@ void PathlineTick(CRules@ this)
     }
 
     // manage controls & debug, only for localhost
-    CPlayer@ local = getLocalPlayer();
-    if (local is null) return;
-    u16 local_id = local.getNetworkID();
-
-    CBlob@ local_blob = getLocalPlayerBlob();
-    if (local_blob is null) return;
-
-    Vec2f player_pos = local_blob.getPosition();
-    Vec2f player_old_pos = local_blob.getOldPosition();
-
-    CControls@ controls = getControls();
-    if (controls is null) return;
-
-    u8 room_id = this.get_u8("captured_room_id");
-    if (room_id != 255)
+    if (isServer() && isClient())
     {
-        // used for recording
-        bool recording_pathline = this.get_bool("recording_pathline");
-        Vec2f recording_startpos = this.get_Vec2f("recording_startpos");
+        CPlayer@ local = getLocalPlayer();
+        if (local is null) return;
+        u16 local_id = local.getNetworkID();
 
-        CBlob@ personal_pathline_blob;
-        CBlob@[] personal_pathlines;
-        if (getBlobsByTag("personal_pathline_" + room_id, @personal_pathlines))
+        CBlob@ local_blob = getLocalPlayerBlob();
+        if (local_blob is null) return;
+
+        Vec2f player_pos = local_blob.getPosition();
+        Vec2f player_old_pos = local_blob.getOldPosition();
+
+        CControls@ controls = getControls();
+        if (controls is null) return;
+
+        u8 room_id = this.get_u8("captured_room_id");
+        if (room_id != 255)
         {
-            @personal_pathline_blob = personal_pathlines[0];
-        }
+            // used for recording
+            bool recording_pathline = this.get_bool("recording_pathline");
+            Vec2f recording_startpos = this.get_Vec2f("recording_startpos");
 
-        // toggle record on/off
-        if (controls.isKeyJustPressed(KEY_MBUTTON)) // for localhost only
-        {
-            Sound::Play2D("ButtonClick.ogg", 1.0f, 1.5f);
-
-            recording_pathline = !recording_pathline;
-            recording_startpos = player_pos;
-        }
-
-        if (recording_pathline) // for localhost only
-        {
-            string[][]@ room_pathlines;
-            if (!this.get("room_pathlines", @room_pathlines)) recording_pathline = false;
-
-            if (room_id >= room_pathlines.length) recording_pathline = false;
-            RecordPathline(this, local_blob, recording_startpos, player_pos, player_old_pos);
-
-            if (!recording_pathline)
+            CBlob@ personal_pathline_blob;
+            CBlob@[] personal_pathlines;
+            if (getBlobsByTag("personal_pathline_" + room_id, @personal_pathlines))
             {
-                SetClientMessage(local_id, "[ERR] Can not record pathline!");
+                @personal_pathline_blob = personal_pathlines[0];
             }
 
-            if (personal_pathline_blob !is null) personal_pathline_blob.set_bool("active", !recording_pathline);
-        }
+            // toggle record on/off
+            if (controls.isKeyJustPressed(KEY_MBUTTON)) // for localhost only
+            {
+                Sound::Play2D("ButtonClick.ogg", 1.0f, 1.5f);
 
-        // save when recording stops
-        bool stopped_recording = !recording_pathline && this.get_bool("recording_pathline");
-        if (stopped_recording)
-        {
-            string pathline_key = "_p_" + level_types[room_id] + "_" + level_ids[room_id] + "_" + room_id; // test 0
-            SavePathline(this, pathline_key, room_id, stopped_recording);
-        }
+                recording_pathline = !recording_pathline;
+                recording_startpos = player_pos;
+            }
 
-        this.set_bool("recording_pathline", recording_pathline);
-        this.set_Vec2f("recording_startpos", recording_startpos);
+            if (recording_pathline) // for localhost only
+            {
+                string[][]@ room_pathlines;
+                if (!this.get("room_pathlines", @room_pathlines)) recording_pathline = false;
+
+                if (room_id >= room_pathlines.length) recording_pathline = false;
+                RecordPathline(this, local_blob, recording_startpos, player_pos, player_old_pos);
+
+                if (!recording_pathline)
+                {
+                    SetClientMessage(local_id, "[ERR] Can not record pathline!");
+                }
+
+                if (personal_pathline_blob !is null) personal_pathline_blob.set_bool("active", !recording_pathline);
+            }
+
+            // save when recording stops
+            bool stopped_recording = !recording_pathline && this.get_bool("recording_pathline");
+            if (stopped_recording)
+            {
+                string pathline_key = "_p_" + level_types[room_id] + "_" + level_ids[room_id] + "_" + room_id; // test 0
+                SavePathline(this, pathline_key, room_id, stopped_recording);
+            }
+
+            this.set_bool("recording_pathline", recording_pathline);
+            this.set_Vec2f("recording_startpos", recording_startpos);
+        }
     }
 
     CBlob@[] personal_pathlines;
@@ -568,7 +570,7 @@ void PathlineTick(CRules@ this)
             personal_pathlines.insertAt(room_id, pathline_blob);
         }
     }
-
+    
     for (uint i = 0; i < personal_pathlines.length; i++)
     {
         CBlob@ pathline_blob = personal_pathlines[i];
@@ -602,11 +604,10 @@ void PathlineTick(CRules@ this)
         bool ok = (diff >= 0 && diff < frames);
 
         if (!ok) continue;
-        bool reset = (diff == 0);
-
         int step = pairs_mode ? 2 : 1;
         int mainIndex = diff * step;
         int prevIndex = (diff > 0) ? (mainIndex - step) : -1;
+        bool reset = mainIndex == 0;
 
         string old_s = "";
         int old_parsed = -1;
@@ -651,9 +652,6 @@ void RunPathline(CRules@ this, CBlob@ pathline_blob, int parsed, bool has_old,
     Vec2f oldpos = has_old ? UnpackVec2f(u32(old_parsed)) : Vec2f(0,0);
     Vec2f endpos = pos + anchor_pos;
     Vec2f gpos = grapple_parsed != -1 ? UnpackVec2f(u32(grapple_parsed)) + anchor_pos : endpos;
-
-    // update vars
-    pathline_blob.setPosition(endpos);
     
     Vec2f last_gpos = pathline_blob.get_Vec2f("grapple_pos");
     if (last_gpos != gpos)
@@ -668,9 +666,16 @@ void RunPathline(CRules@ this, CBlob@ pathline_blob, int parsed, bool has_old,
 
     if (reset)
     {
-        pathline_blob.Tag("wait");
-        pathline_blob.Tag("sync");
+        CBitStream params;
+        params.write_string(pathline_blob.get_string("pathline_tag"));
+        params.write_Vec2f(pathline_blob.get_Vec2f("grapple_pos"));
+        params.write_u32(getGameTime());
+        pathline_blob.SendCommand(pathline_blob.getCommandID("sync"), params);
+        pathline_blob.set_u32("time", getGameTime());
     }
+
+    // update vars
+    pathline_blob.setPosition(endpos);
 }
 
 void RecordPathline(CRules@ this, CBlob@ local_player_blob, Vec2f recording_startpos,

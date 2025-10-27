@@ -25,23 +25,33 @@ void onTick(CBlob@ this)
 	u16 owner_id = this.get_u16("owner_id");
 	if (owner_id == 0) return;
 
-	CPlayer@ player = getPlayerByNetworkId(owner_id);
-	if (player is null) return;
-
-	if (!player.isMyPlayer()) return;
 	if (isServer() && this.getTickSinceCreated() == 1)
 	{
-		CBlob@[] pathline_blobs;
-		getBlobsByName("pathline", @pathline_blobs);
+		CRules@ rules = getRules();
+		if (rules is null) return;
 
-		for (int i = 0; i < pathline_blobs.length; i++)
+		u16[]@ room_owners;
+		if (!rules.get("room_owners", @room_owners)) return; 
+
+		int room_id = room_owners.find(owner_id);
+		if (room_id == -1) return;
+
+		CBlob@[] personal_pathline_blobs;
+		getBlobsByTag("personal_pathline_" + room_id, @personal_pathline_blobs);
+		
+		CBlob@ pathline_blob;
+		if (personal_pathline_blobs.length > 0)
+			@pathline_blob = personal_pathline_blobs[0];
+
+		if (pathline_blob !is null)
 		{
-			CBlob@ pathline_blob = pathline_blobs[i];
-			if (pathline_blob is null) continue;
-
 			pathline_blob.set_Vec2f("anchor_pos", this.getPosition());
 		}
 	}
+
+	CPlayer@ player = getPlayerByNetworkId(owner_id);
+	if (player is null) return;
+	if (!player.isMyPlayer()) return;
 
 	CBlob@ blob = player.getBlob();
 	if (blob is null) return;

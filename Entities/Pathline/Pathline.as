@@ -13,6 +13,7 @@ void onInit(CBlob@ this)
 	this.getShape().SetStatic(true);
 	this.getShape().SetGravityScale(0.0f);
 	this.getShape().getConsts().mapCollisions = false;
+	this.getShape().getConsts().net_threshold_multiplier = 0.1f;
 
 	this.set_u8("room_id", 0);
 	this.set_bool("active", false);
@@ -22,30 +23,37 @@ void onInit(CBlob@ this)
 
 void onTick(CBlob@ this)
 {
-	if (isServer() && (this.getTickSinceCreated() % 30 == 0 || this.hasTag("sync")))
+	if (isServer() && this.hasTag("sync"))
 	{
 		// sync pathline data
 		CBitStream params;
 		params.write_string(this.get_string("pathline_tag"));
 		params.write_Vec2f(this.get_Vec2f("grapple_pos"));
-		params.write_bool(this.hasTag("wait"));
+		params.write_u32(this.get_u32("time"));
 		this.SendCommand(this.getCommandID("sync"), params);
+		
+		this.Untag("sync");
+	}
+
+	u32 time = this.get_u32("time");
+	if (time + 1 >= getGameTime())
+	{
+		return;
 	}
 
 	if (!isClient()) return;
 	if (!this.get_bool("active")) return;
-
-	if (this.get_u32("start_time") == getGameTime()) return; // wait for old position to reset
-	if (this.hasTag("wait"))
-	{
-		this.Untag("wait");
-		return;
-	}
-
+	
 	Vec2f offset = Vec2f(0, -3);
 	Vec2f thispos = this.getPosition() + offset;
+
 	Vec2f thisoldpos = this.getOldPosition() + offset;
-	
+	if (thisoldpos.x < 8 && thisoldpos.y < 8) return;
+
+	bool is_archer = Maths::Abs(this.getHealth() - 2.0f) < 0.001f;
+	Vec2f grapple_pos_raw = this.get_Vec2f("grapple_pos");
+	Vec2f grapple_pos = grapple_pos_raw + offset;
+
 	// main particle at blob position
 	{
 		Vec2f dir = thispos - thisoldpos;
@@ -67,7 +75,7 @@ void onTick(CBlob@ this)
 				p.fastcollision = true;
 				p.gravity = Vec2f(0, 0);
 				p.scale = 0.75f;
-				p.growth = -0.05f;
+				p.growth = -0.075f;
 				p.deadeffect = -1;
 				p.collides = false;
 				p.Z = 50.0f;
@@ -85,11 +93,8 @@ void onTick(CBlob@ this)
 	}
 
 	// if in archer mode (health == 2.0f) spawn a trail from aim pos to this pos
-	if (Maths::Abs(this.getHealth() - 2.0f) < 0.001f)
+	if (is_archer)
 	{
-		Vec2f grapple_pos_raw = this.get_Vec2f("grapple_pos");
-		Vec2f grapple_pos = grapple_pos_raw + offset;
-
 		Vec2f dir = thispos - grapple_pos;
 		f32 dist = dir.Length();
 
@@ -104,7 +109,7 @@ void onTick(CBlob@ this)
 			{
 				f32 tt = line_qty > 1 ? f32(j) / f32(line_qty - 1) : 0.0f;
 				Vec2f at = grapple_pos + dir * tt;
-				int time = 5 * tt + 2;
+				int time = 2;
 
 				CParticle@ lp = ParticleAnimated("PathlineCursorGrapple.png", at, Vec2f(0,0), 0, 0, time, 0.0f, true);
 				if (lp !is null)
@@ -134,12 +139,12 @@ void onCommand(CBlob@ this, u8 cmd, CBitStream@ params)
 		Vec2f grapple_pos;
 		if (!params.saferead_Vec2f(grapple_pos)) return;
 
-		bool wait;
-		if (!params.saferead_bool(wait)) return;
+		u32 time;
+		if (!params.saferead_u32(time)) return;
 
 		this.Tag(pathline_tag);
 		this.set_Vec2f("grapple_pos", grapple_pos);
-		if (wait) this.Tag("wait");
+		this.set_u32("time", time);
 	}
 	else if (cmd == this.getCommandID("switch"))
 	{
@@ -160,6 +165,11 @@ void onCommand(CBlob@ this, u8 cmd, CBitStream@ params)
 
 		this.set_u32("start_time", gt);
 		this.set_bool("active", !this.get_bool("active"));
+		this.set_u32("time", getGameTime());
+
+	    this.Sync("active", true);
+		this.Sync("start_time", true);
+		this.Sync("time", true);
 	}
 }
 
