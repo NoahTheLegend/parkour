@@ -152,21 +152,17 @@ void onRender(CRules@ this)
     {
         Vec2f start_pos = Vec2f(100, 200);
 
-        // draw debug overlay with useful state from this script
+        // draw debug overlay with useful state from this script (cleaned & grouped)
         GUI::SetFont("menu");
 
         f32 line_h = 14.0f;
-        uint l = 0;
+        int l = 0;
         Vec2f p = start_pos;
+        int gap = int(Maths::Ceil(20.0f / line_h)); // approx 20px gap
 
-        // basic level / mode info
-        string lvl_type_name = this.get_string("current_level_type_name");
-        int lvl_id = this.get_s32("current_level_id");
-        int lvl_complex = this.get_s32("current_level_complexity");
-        GUI::DrawText("LEVEL: " + lvl_type_name + " (" + lvl_id + ")", p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
-        GUI::DrawText("COMPLEXITY: " + lvl_complex, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
-
-        // room capture / current room
+        //
+        // ROOM INFO
+        //
         u8 captured = this.get_u8("captured_room_id");
         GUI::DrawText("CAPTURED ROOM ID: " + captured, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
 
@@ -177,20 +173,24 @@ void onRender(CRules@ this)
         GUI::DrawText("CURRENT ROOM SIZE: (" + int(cur_size.x) + "," + int(cur_size.y) + ")", p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
         GUI::DrawText("CURRENT ROOM CENTER: (" + int(cur_center.x) + "," + int(cur_center.y) + ")", p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
 
-        // pathline / recording state
-        u8 pathline_state = this.get_u8("pathline_state");
-        u32 pathline_start = this.get_u32("pathline_start_time");
+        l += gap;
+
+        //
+        // RECORDING / PATHLINE (minimal)
+        //
         bool recording = this.get_bool("recording_pathline");
         Vec2f recording_startpos = this.get_Vec2f("recording_startpos");
-        GUI::DrawText("PATHLINE STATE: " + pathline_state, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
-        GUI::DrawText("PATHLINE START: " + pathline_start + "  RECORDING: " + recording, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
+        GUI::DrawText("RECORDING: " + recording, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
         GUI::DrawText("RECORD START POS: (" + int(recording_startpos.x) + "," + int(recording_startpos.y) + ")", p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
 
-        // cached pathline positions
+        l += gap;
+
+        //
+        // CACHED POSITIONS & ARRAYS / COUNTS
+        //
         int cached_sz = cached_positions.size();
         GUI::DrawText("CACHED POSITIONS: " + cached_sz, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
 
-        // arrays / counts
         u8[]@ room_ids; u8[]@ level_types; u16[]@ level_ids; u16[]@ room_owners;
         int room_count = 0;
         if (this.get("room_ids", @room_ids)) room_count = room_ids.size();
@@ -202,6 +202,8 @@ void onRender(CRules@ this)
         if (this.get("room_owners", @room_owners)) room_owners_count = room_owners.size();
 
         GUI::DrawText("ROOMS: " + room_count + " | LEVEL_TYPES: " + level_types_count + " | LEVEL_IDS: " + level_ids_count, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
+
+        // pathline key for current captured room (best-effort)
         string pk = "none";
         if (captured != 255)
         {
@@ -212,32 +214,28 @@ void onRender(CRules@ this)
             }
             else
             {
-                u8[]@ level_types;
-                u16[]@ level_ids;
-                u8[]@ room_ids;
-                if (this.get("level_types", @level_types) && this.get("level_ids", @level_ids) && this.get("room_ids", @room_ids))
+                u8[]@ ltypes;
+                u16[]@ lids;
+                u8[]@ rids;
+                if (this.get("level_types", @ltypes) && this.get("level_ids", @lids) && this.get("room_ids", @rids))
                 {
                     uint ci = uint(captured);
-                    if (ci < level_types.size() && ci < level_ids.size() && ci < room_ids.size())
+                    if (ci < ltypes.size() && ci < lids.size() && ci < rids.size())
                     {
-                        pk = "_p_" + level_types[ci] + "_" + level_ids[ci] + "_" + room_ids[ci];
+                        pk = "_p_" + ltypes[ci] + "_" + lids[ci] + "_" + rids[ci];
                     }
                 }
             }
         }
         GUI::DrawText("PATHLINE KEY: " + pk, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
 
-        // room coordinates array (local_room_coords may be set on reload)
+        l += gap;
+
+        //
+        // LOCAL ROOM COORDS & OWNERS (preview)
+        //
         int local_coords_count = (local_room_coords is null) ? 0 : local_room_coords.length;
         GUI::DrawText("LOCAL ROOM COORDS: " + local_coords_count, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
-
-        // config / pathline cfg state
-        GUI::DrawText("CFG LOADED: " + cfg_loaded, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
-        string cfg_file = (pathline_cfg is null) ? "null" : "parkour_pathlines.cfg";
-        GUI::DrawText("PATHLINE CFG: " + cfg_file, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
-
-        // misc runtime values
-        GUI::DrawText("DEBUG_TEST: " + debug_test, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
 
         // show first few room ids/owners if present
         for (uint i = 0; i < 6 && i < room_count; i++)
@@ -245,15 +243,66 @@ void onRender(CRules@ this)
             string owner_str = "none";
             if (i < room_owners_count)
             {
-            u16 oid = room_owners[i];
-            if (oid != 0)
-            {
-                CPlayer@ owner_p = getPlayerByNetworkId(oid);
-                owner_str = owner_p !is null ? owner_p.getUsername() : ("id:" + oid);
-            }
+                u16 oid = room_owners[i];
+                if (oid != 0)
+                {
+                    CPlayer@ owner_p = getPlayerByNetworkId(oid);
+                    owner_str = owner_p !is null ? owner_p.getUsername() : ("id:" + oid);
+                }
             }
             Vec2f rc = (local_room_coords !is null && i < local_room_coords.length) ? local_room_coords[i] : Vec2f(0,0);
             GUI::DrawText("R[" + i + "] id:" + (room_ids is null ? 0 : room_ids[i]) + " owner:" + owner_str + " pos:(" + int(rc.x) + "," + int(rc.y) + ")", p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
+        }
+
+        l += gap;
+
+        //
+        // CHECKPOINT VIEW (new)
+        //
+        GUI::DrawText("CHECKPOINT (packed): " + checkpoint_packed, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
+        if (checkpoint_packed != "")
+        {
+            Vec2f cp = UnpackVec2f(parseInt(checkpoint_packed));
+            int found = cached_positions.find(checkpoint_packed);
+
+            string found_str = (found != -1) ? ("cached idx " + found) : "not in cache";
+            GUI::DrawText("CHECKPOINT POS: (" + int(cp.x) + "," + int(cp.y) + ")  " + found_str, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
+        }
+
+        // current frame (for pathline)
+        // timing / frames
+        CBlob@[] personal_pathlines;
+        if (!getBlobsByTag("personal_pathline_" + room_id, @personal_pathlines)) return;
+
+        CBlob@ pathline_blob;
+        if (personal_pathlines.size() > 0)
+            @pathline_blob = personal_pathlines[0];
+
+        if (pathline_blob !is null && pathline_blob.get_bool("active"))
+        {
+            string[]@ positions_str;
+            string[][]@ room_pathlines;
+
+            if (!this.get("room_pathlines", @room_pathlines)) return;
+            if (room_id >= room_pathlines.length) return;
+
+            @positions_str = room_pathlines[room_id];
+            u32 start_time = pathline_blob.get_u32("start_time");
+            int diff = int(getGameTime()) - int(start_time);
+
+            int entries = int(positions_str.length);
+            if (entries <= 0) return;
+
+            CBlob@ local_blob = getLocalPlayerBlob();
+            if (local_blob !is null)
+            {
+                bool pairs_mode = local_blob.getName() == "archer";
+                int frames = pairs_mode ? entries / 2 : entries;
+                if (frames <= 0) return;
+
+                diff %= frames;
+            }
+            GUI::DrawText("FRAME: " + diff + " / " + entries, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
         }
     }
 
@@ -421,6 +470,8 @@ string[][] loadRoomPathlines(CRules@ this, u8[]@ &in room_ids, u8[]@ &in level_t
     return room_pathlines;
 }
 
+string checkpoint_packed = 0;
+
 // runs only on server and localhost
 void PathlineTick(CRules@ this)
 {
@@ -524,6 +575,34 @@ void PathlineTick(CRules@ this)
 
                 recording_pathline = !recording_pathline;
                 recording_startpos = player_pos;
+                checkpoint_packed = "";
+            }
+            
+            if (recording_pathline)
+            {
+                // make a checkpoint to go back to
+                if (controls.isKeyJustPressed(KEY_F2))
+                {
+                    string unpacked_current = cached_positions[cached_positions.size() - 1];
+                    checkpoint_packed = unpacked_current;
+
+                    local_blob.setPosition(player_old_pos);
+                }
+                // go back to checkpoint
+                else if (controls.isKeyJustPressed(KEY_F3))
+                {
+                    int id = cached_positions.find(checkpoint_packed);
+
+                    if (id != -1)
+                    {
+                        Vec2f cp = UnpackVec2f(parseInt(checkpoint_packed)) + recording_startpos;
+                        local_blob.setPosition(cp);
+                        local_blob.setPosition(cp);
+                        local_blob.setVelocity(Vec2f(0,0));
+
+                        cached_positions.resize(id + 1);
+                    }
+                }
             }
 
             if (recording_pathline) // for localhost only

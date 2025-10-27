@@ -19,6 +19,8 @@ void onInit(CBlob@ this)
 	this.Tag("explosion always teamkill"); // ignore 'no teamkill' for explosives
 	this.set_TileType("background tile", CMap::tile_castle_back);
 
+	if(isServer()) getMap().server_setFloodWaterWorldspace(this.getPosition(), false);
+
 	if (getNet().isServer())
 	{
 		dictionary harvest;

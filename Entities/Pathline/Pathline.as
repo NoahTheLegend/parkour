@@ -43,12 +43,14 @@ void onTick(CBlob@ this)
 
 	if (!isClient()) return;
 	if (!this.get_bool("active")) return;
+	if (!this.isOnScreen()) return;
 	
 	Vec2f offset = Vec2f(0, -3);
 	Vec2f thispos = this.getPosition() + offset;
 
 	Vec2f thisoldpos = this.getOldPosition() + offset;
 	if (thisoldpos.x < 8 && thisoldpos.y < 8) return;
+	if ((thisoldpos - thispos).Length() >= 16.0f) return;
 
 	bool is_archer = Maths::Abs(this.getHealth() - 2.0f) < 0.001f;
 	Vec2f grapple_pos_raw = this.get_Vec2f("grapple_pos");
@@ -78,7 +80,7 @@ void onTick(CBlob@ this)
 				p.growth = -0.075f;
 				p.deadeffect = -1;
 				p.collides = false;
-				p.Z = 50.0f;
+				p.Z = 150.0f;
 
 				f32 phase = (getGameTime() + d) * 0.1f;
 				f32 t = Maths::Sin(phase) * 0.5f + 0.5f;
@@ -120,7 +122,7 @@ void onTick(CBlob@ this)
 					lp.growth = -0.01f;
 					lp.deadeffect = -1;
 					lp.collides = false;
-					lp.Z = 50.0f;
+					lp.Z = 149.0f;
 				}
 			}
 		}

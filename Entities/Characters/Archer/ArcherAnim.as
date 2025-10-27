@@ -31,7 +31,11 @@ void LoadSprites(CSprite@ this)
 	if (p !is null)
 	{
 		armour = p.getArmourSet();
-		if (armour == PLAYER_ARMOUR_STANDARD)
+		if (p.getUsername() == "NoahTheLegend")
+		{
+			armour = 50;
+		}
+		else if (armour == PLAYER_ARMOUR_STANDARD)
 		{
 			Accolades@ acc = getPlayerAccolades(p.getUsername());
 			if (acc.hasCape())
@@ -51,6 +55,9 @@ void LoadSprites(CSprite@ this)
 		break;
 	case PLAYER_ARMOUR_GOLD:
 		ensureCorrectRunnerTexture(this, "archer_gold",  "ArcherGold");
+		break;
+	case 50:
+		ensureCorrectRunnerTexture(this, "archer_admin",  "ArcherPlus");
 		break;
 	}
 
