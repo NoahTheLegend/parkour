@@ -124,6 +124,20 @@ void onRender(CRules@ this)
     u8 room_id = this.get_u8("captured_room_id");
     RenderMessages(this);
 
+    // render miscellaneous info
+    int level_id = this.get_s32("current_level_id");
+    int current_complexity = this.get_s32("current_level_complexity");
+    string type_name = this.get_string("current_level_type_name");
+
+    GUI::SetFont("Terminus_18");
+    GUI::DrawText("LEVEL: " + type_name + " " + level_id, Vec2f(10, 10), SColor(255, 255, 255, 255));
+    GUI::DrawText("COMPLEXITY: ", Vec2f(10, 30), SColor(255, 255, 255, 255));
+    
+    // colored text
+    // todo
+    SColor col = SColor(255, 255, 255, 255);
+    GUI::DrawText("" + current_complexity, Vec2f(128, 30), col);
+
     if (local_room_coords !is null)
     {
         // room_id of 255 means "none"
@@ -305,20 +319,6 @@ void onRender(CRules@ this)
             GUI::DrawText("FRAME: " + diff + " / " + entries, p + Vec2f(0, l++ * line_h), SColor(255, 255, 255, 0));
         }
     }
-
-    // render miscellaneous info
-    int level_id = this.get_s32("current_level_id");
-    int current_complexity = this.get_s32("current_level_complexity");
-    string type_name = this.get_string("current_level_type_name");
-
-    GUI::SetFont("Terminus_18");
-    GUI::DrawText("LEVEL: " + type_name + " " + level_id, Vec2f(10, 10), SColor(255, 255, 255, 255));
-    GUI::DrawText("COMPLEXITY: ", Vec2f(10, 30), SColor(255, 255, 255, 255));
-    
-    // colored text
-    // todo
-    SColor col = SColor(255, 255, 255, 255);
-    GUI::DrawText("" + current_complexity, Vec2f(128, 30), col);
 }
 
 void RenderMessages(CRules@ this)
@@ -580,6 +580,8 @@ void PathlineTick(CRules@ this)
             
             if (recording_pathline)
             {
+                bool is_archer = (local_blob.getName() == "archer");
+
                 // make a checkpoint to go back to
                 if (controls.isKeyJustPressed(KEY_F2))
                 {
@@ -599,8 +601,9 @@ void PathlineTick(CRules@ this)
                         local_blob.setPosition(cp);
                         local_blob.setPosition(cp);
                         local_blob.setVelocity(Vec2f(0,0));
+                        local_blob.set_Vec2f("grapple_pos", cp);
 
-                        cached_positions.resize(id + 1);
+                        cached_positions.resize(id + (is_archer ? 2 : 1));
                     }
                 }
             }

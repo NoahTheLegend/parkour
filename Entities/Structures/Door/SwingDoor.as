@@ -20,6 +20,7 @@ void onInit(CBlob@ this)
 
 	//block knight sword
 	this.Tag("blocks sword");
+	this.server_SetHealth(1000.0f);
 
 	// disgusting HACK
 	// for DefaultNoBuild.as
