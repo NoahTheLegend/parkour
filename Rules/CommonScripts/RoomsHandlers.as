@@ -322,6 +322,9 @@ void EraseRoom(CRules@ this, Vec2f pos, Vec2f size)
         CBlob@ b = blobs[i];
         if (b !is null && !b.hasTag("player")) // don't delete players
         {
+            // remove bg
+            map.server_SetTile(b.getPosition(), CMap::tile_empty);
+
             b.Untag("exploding");
             b.Tag("dead");
             b.server_Die();
@@ -447,4 +450,53 @@ void RunRoomLoaders(CRules@ this)
         if (server_loader !is null)
             server_loader.loadRoom();
     }
+}
+
+int getComplexity(u8 level_type, int level_id)
+{
+    switch (level_type)
+    {
+        case RoomType::knight:
+        {
+            if (level_id < 0) return -1;
+            uint idx = uint(level_id);
+            if (idx >= difficulty_knight.size()) return -1;
+            return difficulty_knight[idx];
+
+            break;
+        }
+        case RoomType::archer:
+        {
+            if (level_id < 0) return -1;
+            uint idx = uint(level_id);
+            if (idx >= difficulty_archer.size()) return -1;
+            return difficulty_archer[idx];
+
+            break;
+        }
+        case RoomType::builder:
+        {
+            if (level_id < 0) return -1;
+            uint idx = uint(level_id);
+            if (idx >= difficulty_builder.size()) return -1;
+            return difficulty_builder[idx];
+
+            break;
+        }
+        default:
+            return -1;
+    }
+
+    return -1;
+}
+
+SColor getComplexityRedness(int complexity)
+{
+    // map complexity to redness color
+    // complexity 0-10
+    f32 t = Maths::Clamp(complexity / 10.0f, 0.0f, 1.0f);
+    u8 r = 255;
+    u8 g = u8(255 * (1.0f - t));
+    u8 b = u8(255 * (1.0f - t));
+    return SColor(255, r, g, b);
 }

@@ -129,12 +129,13 @@ void SyncRoomCommand(CRules@ this, CBitStream@ params)
 
     s32 complexity;
     if (!params.saferead_s32(complexity)) {print("[CMD] Failed to read complexity"); return;}
-
+    
     string level_type_name;
     if (!params.saferead_string(level_type_name)) {print("[CMD] Failed to read level type name"); return;}
 
     this.set_u8("current_level_type", level_type);
     this.set_s32("current_level_id", level_id);
+    this.set_s32("current_level_complexity", getComplexity(level_type, level_id));    
 
     this.set_Vec2f("current_room_pos", start_pos);
     this.set_Vec2f("current_room_size", room_size);

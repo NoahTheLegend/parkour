@@ -27,6 +27,7 @@ void onRestart(CRules@ this)
     // clear current room info
     this.set_u8("current_level_type", 0);
     this.set_s32("current_level_id", -1);
+    this.set_s32("current_level_complexity", 0);
 
     this.set_string("_client_message", "");
     this.set_u32("_client_message_time", 0);
@@ -60,6 +61,11 @@ void onReload(CRules@ this)
     {
         @local_room_coords = @room_coords;
     }
+
+    // reload config
+    @pathline_cfg = ConfigFile();
+    cfg_loaded = pathline_cfg.loadFile("../Cache/parkour_pathlines.cfg");
+    print("Reloaded config? " + pathline_cfg.exists("_p_1_31_0"));
 }
 
 void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
@@ -132,11 +138,10 @@ void onRender(CRules@ this)
     GUI::SetFont("Terminus_18");
     GUI::DrawText("LEVEL: " + type_name + " " + level_id, Vec2f(10, 10), SColor(255, 255, 255, 255));
     GUI::DrawText("COMPLEXITY: ", Vec2f(10, 30), SColor(255, 255, 255, 255));
-    
-    // colored text
-    // todo
-    SColor col = SColor(255, 255, 255, 255);
-    GUI::DrawText("" + current_complexity, Vec2f(128, 30), col);
+
+    string current_complexity_string = current_complexity == -1 ? "N/A" : "" + current_complexity;
+    SColor col = getComplexityRedness(current_complexity);
+    GUI::DrawText("" + current_complexity_string, Vec2f(128, 30), col);
 
     if (local_room_coords !is null)
     {
@@ -358,7 +363,7 @@ void RenderMessages(CRules@ this)
     }
 }
 
-bool debug_test = true;
+bool debug_test = false;
 void onTick(CRules@ this)
 {
     // client listener
