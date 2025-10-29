@@ -1,9 +1,0 @@
-2025-10-02 03:25:25 | DEBUG   | Logger initialized, path=C:\Program Files (x86)\Steam\steamapps\common\King Arthur's Gold\Mods\parkour-cont\parkour\Videos\latestlog.log
-2025-10-02 03:25:25 | INFO    | === Script started ===
-2025-10-02 03:25:25 | INFO    | Input path: C:\Program Files (x86)\Steam\steamapps\common\King Arthur's Gold\Mods\parkour-cont\parkour\Videos\Proper_sliding.gif
-2025-10-02 03:25:25 | INFO    | Converting GIF -> PNGs: C:\Program Files (x86)\Steam\steamapps\common\King Arthur's Gold\Mods\parkour-cont\parkour\Videos\Proper_sliding.gif
-2025-10-02 03:25:33 | INFO    | Frames saved: 960
-2025-10-02 03:25:33 | INFO    | Moved original gif to C:\Program Files (x86)\Steam\steamapps\common\King Arthur's Gold\Mods\parkour-cont\parkour\Videos\Proper_sliding\Proper_sliding.gif
-2025-10-02 03:25:33 | INFO    | Success: saved 960 PNG frames into C:\Program Files (x86)\Steam\steamapps\common\King Arthur's Gold\Mods\parkour-cont\parkour\Videos\Proper_sliding\Files
-2025-10-02 03:25:33 | INFO    | Original GIF moved to: C:\Program Files (x86)\Steam\steamapps\common\King Arthur's Gold\Mods\parkour-cont\parkour\Videos\Proper_sliding\Proper_sliding.gif
-2025-10-02 03:25:33 | INFO    | === Finished successfully ===
