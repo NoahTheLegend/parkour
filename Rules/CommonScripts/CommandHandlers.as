@@ -15,13 +15,20 @@ void sendRoomCommand(CRules@ rules, u16 pid, u8 type, int level_id, Vec2f pos)
 
     if (isClient())
     {
+        CPlayer@ p = getPlayerByNetworkId(pid);
+        if (p is null || !p.isMyPlayer()) return;
+
         rules.SendCommand(rules.getCommandID("set_room"), params);
         print("[CMD] Sent " + rules.getCommandID("set_room"));
+
+        printTrace();
     }
     else
     {
         print("[CMD] Executed SetRoomCommand directly on server");
         BuildRoom(rules, pid, type, level_id, ROOM_SIZE, pos);
+
+        printTrace();
     }
 }
 

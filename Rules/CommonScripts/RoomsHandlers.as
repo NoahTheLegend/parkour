@@ -324,6 +324,7 @@ void EraseRoom(CRules@ this, Vec2f pos, Vec2f size)
         {
             // remove bg
             map.server_SetTile(b.getPosition(), CMap::tile_empty);
+            map.SetTile(map.getTileOffset(b.getPosition()), CMap::tile_empty);
 
             b.Untag("exploding");
             b.Tag("dead");
@@ -360,6 +361,7 @@ void EraseRoom(CRules@ this, Vec2f pos, Vec2f size)
             {
                 // first pass: only replace collapsable tiles with filler
                 map.server_SetTile(tpos, filler_tile);
+                map.SetTile(map.getTileOffset(tpos), filler_tile);
             }
         }
 
@@ -367,6 +369,7 @@ void EraseRoom(CRules@ this, Vec2f pos, Vec2f size)
         for (uint i = 0; i < tile_positions.length; i++)
         {
             map.server_SetTile(tile_positions[i], CMap::tile_empty);
+            map.SetTile(map.getTileOffset(tile_positions[i]), CMap::tile_empty);
         }
     }
 
