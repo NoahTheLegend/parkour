@@ -130,9 +130,9 @@ class VideoPlayer
             // render_time is adding up to 1.0f to trigger a frame change with any fpslimit set
             f32 tick = f32(30.0f) / 30.0f;
 
-	        #ifdef STAGING
-	        tick = Maths::Max(1, f32(v_fpslimit) / 30.0f);
-	        #endif
+	        //#ifdef STAGING
+	        //tick = Maths::Max(1, f32(v_fpslimit) / 30.0f);
+	        //#endif
 
             render_time += 1.0f / tick * speed;
             if (render_time >= 1.0f)

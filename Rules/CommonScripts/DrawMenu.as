@@ -309,20 +309,21 @@ void onTick(CRules@ this)
 	}
 
 	bool initialized = this.get_bool("GUI initialized");
-	if ((!initialized || isGUINull()))
-	{
-        InitializeGUI(this);
-		LoadLevels(); // must be after InitializeGUI
-
-		updateOptionSliderValues();
-    	setCachedStates(this);
-	}
-
-	if (initialized && isClient() && !this.hasTag("videos_loaded") && getLocalPlayer() !is null)
+	if (!this.hasTag("videos_loaded"))
 	{
 		LoadVideos(this, load_videos_count);
 		load_videos_count++;
+		
+		if (this.hasTag("videos_loaded"))
+		{
+        	InitializeGUI(this);
+			LoadLevels(); // must be after InitializeGUI
+
+			updateOptionSliderValues();
+    		setCachedStates(this);
+		}
 	}
+	if (!initialized || isGUINull()) return;
 
 	EnsureRoomOwned(this);
 
@@ -563,6 +564,7 @@ void InitializeGUI(CRules@ this)
 
 	Vec2f create_room_size = Vec2f(menuSize) * 0.75f;
 	Vec2f create_room_pos = Vec2f((levelsFrame.size.x - create_room_size.x) / 2 - 0, (levelsFrame.size.y - create_room_size.y) / 2 - 16);
+	
 	Button@ createRoomButton = @Button(create_room_pos, create_room_size, "Create a room", SColor(255, 255, 255, 255), "Sakana_18");
 	createRoomButton.name = "createRoomButton";
 	createRoomButton.addClickListener(createRoomClickListener);

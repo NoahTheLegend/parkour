@@ -210,7 +210,9 @@ class RoomPNGLoader
 					SColor col = (idx != -1) ? colors[idx] : SColor();
 					Vec2f last_pos = lazy_pos + pos * map.tilesize + margin;
 
+					SetMesh();
 					handlePixel(col, last_pos);
+					FixMesh();
 					placed_tiles.push_back(map.getTileOffset(lazy_pos + pos * map.tilesize));
 				}
 
@@ -260,7 +262,9 @@ class RoomPNGLoader
 				const SColor pixel = image.readPixel();
 				Vec2f last_pos = lazy_pos + pixel_pos * map.tilesize + margin;
 
+				SetMesh();
 				handlePixel(pixel, last_pos);
+				FixMesh();
 				lazy_placed_tiles.push_back(map.getTileOffset(last_pos));
 
 				lazy_pixel_index++;

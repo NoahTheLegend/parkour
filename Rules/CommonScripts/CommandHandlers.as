@@ -331,7 +331,7 @@ void SyncRoomOwnerCommand(CRules@ this, CBitStream@ params)
     this.set("room_owners", @room_owners);
     
     CPlayer@ p = getPlayerByNetworkId(pid);
-    if (p !is null)
+    if (p !is null && p.isMyPlayer())
     {
         warn("[INF] Player " + p.getUsername() + " assigned room id " + free_room_id);
         this.set_u8("captured_room_id", free_room_id);
