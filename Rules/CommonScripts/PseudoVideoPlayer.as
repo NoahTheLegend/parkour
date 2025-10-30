@@ -1,3 +1,4 @@
+
 class VideoPlayer
 {
     bool is_rendering;
@@ -9,8 +10,9 @@ class VideoPlayer
     f32 scaleY;
 
     int current_frame;
-    string video_sprite_path;
+    string video_path;
 
+    string[] _paths_to_frames;
     int total_frames;
     f32 render_time;
 
@@ -20,11 +22,9 @@ class VideoPlayer
     string label;
     string prefix;
 
-    string multiline_label;
-    
-    // New: pass frames count as third parameter (defaults to 1)
     VideoPlayer(string path, Vec2f _size, f32 _scale = 1.0f, f32 _speed = 1.0f)
     {
+        video_path = path;
         size = _size;
         scaleX = _scale;
         scaleY = _scale;
@@ -33,12 +33,12 @@ class VideoPlayer
         is_rendering = false;
         is_playing = false;
         current_frame = 0;
+        total_frames = 0;
         render_time = 0.0f;
 
         screen_size = getDriver().getScreenDimensions();
         fade_in = 1.0f;
 
-        // prefix is the last path component (same as before)
         string[] spl = path.split("/");
         prefix = spl[spl.length() - 1];
 
@@ -49,47 +49,33 @@ class VideoPlayer
             label += label_spl[i];
         }
 
-        // Use path directly for CFileImage and DrawIcon
-        video_sprite_path = path;
+        _paths_to_frames.clear();
+        cachePaths();
+    }
 
-        CFileImage img(path);
-        Vec2f texSize = Vec2f(0, 0);
-        print("Loading video sprite sheet from "+path);
+    void cachePaths()
+    {
+        // store all absolute paths to frames to optimize future access
+        for (uint i = 1; i < 5120; i++)
+        {
+            string formatted = "_" + ("0000" + i).substr((("0000" + i).length() - 4), 4);
+            string raw_path = video_path + formatted + ".png";
+            print("Looking for frame: " + raw_path);
 
-        if (img.isLoaded())
-        {
-            texSize = Vec2f(f32(img.getWidth()), f32(img.getHeight()));
-        }
+            CFileMatcher fm(raw_path);
+            string frame_path = fm.getFirst();
 
-        if (texSize.x > 0.0f && texSize.y > 0.0f && size.y > 0.0f)
-        {
-            int rows = int(texSize.y / size.y) - 1;
-            if (rows < 1) rows = 1;
-            total_frames = rows * 15;
-        }
-        else
-        {
-            // fallback to a single frame if we couldn't determine dimensions
-            total_frames = 1;
-        }
-
-        // Build multiline_label: wrap every third word onto a new line
-        multiline_label = "";
-        int word_count = 0;
-        for (uint i = 0; i < label_spl.length(); i++)
-        {
-            if (word_count == 3)
+            if (frame_path == "")
             {
-                multiline_label += "\n";
-                word_count = 0;
+                break;
             }
-            else if (i > 0)
+            else
             {
-                multiline_label += " ";
-            }
+                _paths_to_frames.push_back(frame_path);
+                total_frames++;
 
-            multiline_label += label_spl[i];
-            word_count++;
+                //print("Cached frame: " + frame_path + " raw: " + raw_path);
+            }
         }
     }
 
@@ -123,9 +109,9 @@ class VideoPlayer
             // render_time is adding up to 1.0f to trigger a frame change with any fpslimit set
             f32 tick = f32(30.0f) / 30.0f;
 
-            #ifdef STAGING
-            tick = Maths::Max(1, f32(v_fpslimit) / 30.0f);
-            #endif
+	        #ifdef STAGING
+	        tick = Maths::Max(1, f32(v_fpslimit) / 30.0f);
+	        #endif
 
             render_time += 1.0f / tick * speed;
             if (render_time >= 1.0f)
@@ -136,7 +122,7 @@ class VideoPlayer
 
             if (current_frame >= total_frames)
             {
-                current_frame = current_frame % total_frames;
+                current_frame = 0;
             }
         }
 
@@ -168,22 +154,16 @@ class VideoPlayer
             GUI::SetFont("Terminus_18");
             show_label = true;
         }
-        else
-        {
-            GUI::SetFont("Terminus_16");
-            GUI::DrawTextCentered(label, current_position + Vec2f(size.x * currentSX, 10), SColor(255 * fade_in, 255, 255, 255));
-            
-            GUI::SetFont("Terminus_18");
-            show_label = true;
-        }
         
-        // DrawIcon's second parameter is the frame index when using a spritesheet.
-        int draw_frame = (total_frames > 0) ? (current_frame % total_frames) : 0;
-        GUI::DrawIcon(video_sprite_path, draw_frame, size, current_position, currentSX, currentSY, SColor(255 * fade_in, 255, 255, 255));
-        //print(video_sprite_path+" frame "+draw_frame+" sz "+size+" pos "+current_position+" x "+currentSX+" y "+currentSY+"");
+        GUI::DrawIcon(_paths_to_frames[current_frame], 0, size, current_position, currentSX, currentSY, SColor(255 * fade_in, 255, 255, 255));
+
+        if (!is_playing)
+        {
+            // draw the name at the bottom of preview
+        }
         if (show_label)
         {
-            GUI::DrawTextCentered(multiline_label, current_position + Vec2f(size.x * currentSX, 10), SColor(255 * fade_in, 255, 255, 255));
+            GUI::DrawTextCentered(label, current_position + Vec2f(size.x * currentSX, 15), SColor(255 * fade_in, 255, 255, 255));
         }
     }
 
