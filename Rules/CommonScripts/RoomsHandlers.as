@@ -359,7 +359,7 @@ void EraseRoom(CRules@ this, Vec2f pos, Vec2f size)
             if (collapseable_tiles.find(tile) != -1)
             {
                 // first pass: only replace collapsable tiles with filler
-                map.server_SetTile(tpos, CMap::filler_tile);
+                map.server_SetTile(tpos, filler_tile);
             }
         }
 

@@ -430,7 +430,7 @@ void onTick(CRules@ this)
         u16[]@ level_ids;
         if (!this.get("level_ids", @level_ids)) return;
 
-        string[][] room_pathlines;
+        string[][]@ room_pathlines;
         if (!this.get("room_pathlines", @room_pathlines))
         {
             room_pathlines = loadRoomPathlines(this, room_ids, level_types, level_ids, room_pathlines);
