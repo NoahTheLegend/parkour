@@ -147,143 +147,136 @@ void LoadClassLevels(const string &in dir, const string &in filePrefix, Rectangl
 
 void LoadVideos(CRules@ this, u32 tick)
 {
-	f32 _15fps = 0.5f / 15 * 2;
+	f32 _15fps = 1.0f / 15 / 2;
 	f32 _30fps = 1.0f / 30 * 2;
-
-	// VideoPlayer(string path, Vec2f _size, f32 _scale = 1.0f, f32 _speed = 1.0f)
-	if (tick != 0 && tick != 1)
-	{
-		return;
-	}
-	else this.Tag("videos_loaded");
 
 	switch (tick)
 	{
-	case 0:
-		help_videos.push_back(@VideoPlayer("Tiles_Have_Properties", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 1:
-		help_videos.push_back(@VideoPlayer("Pathline_Assist", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 2:
-		help_videos.push_back(@VideoPlayer("Edge_Climb", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 3:
-		help_videos.push_back(@VideoPlayer("Edge_Jump", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 4:
-		help_videos.push_back(@VideoPlayer("Niche_Grab", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 5:
-		help_videos.push_back(@VideoPlayer("Higher_Glide", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 6:
-		help_videos.push_back(@VideoPlayer("Long_Ladder_Jump", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 7:
-		help_videos.push_back(@VideoPlayer("Spike_Wallrun", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 8:
-		help_videos.push_back(@VideoPlayer("Ceiling_Grab", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 9:
-		help_videos.push_back(@VideoPlayer("Deep_Edge_Jump", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 10:
-		help_videos.push_back(@VideoPlayer("Quick_Slide", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 11:
-		help_videos.push_back(@VideoPlayer("Door_Grab", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 12:
-		help_videos.push_back(@VideoPlayer("Platform_Grapple_Slingshot", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 13:
-		help_videos.push_back(@VideoPlayer("Glide_Door_Climb", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 14:
-		help_videos.push_back(@VideoPlayer("Double_Slash_Ladder_Grab", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 15:
-		help_videos.push_back(@VideoPlayer("Late_Glide_Jump", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 16:
-		help_videos.push_back(@VideoPlayer("Late_Slide_Jump", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 17:
-		help_videos.push_back(@VideoPlayer("Niche_Wallrun_Recovery", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 18:
-		help_videos.push_back(@VideoPlayer("Niche_Jump", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 19:
-		help_videos.push_back(@VideoPlayer("Trampoline_Glide", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 20:
-		help_videos.push_back(@VideoPlayer("Water_Bounce", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 21:
-		help_videos.push_back(@VideoPlayer("Bunnyhop", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 22:
-		help_videos.push_back(@VideoPlayer("Waterrun_Edge_Grab", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 23:
-		help_videos.push_back(@VideoPlayer("Corner_Jump", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 24:
-		help_videos.push_back(@VideoPlayer("Wide_Corner_Jump", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 25:
-		help_videos.push_back(@VideoPlayer("Slide_Ceiling_Jump", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 26:
-		help_videos.push_back(@VideoPlayer("Seven_Tiles_Jump", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 27:
-		help_videos.push_back(@VideoPlayer("Late_Corner_Jump", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 28:
-		help_videos.push_back(@VideoPlayer("Trampoline_Grapple_Boost", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 29:
-		help_videos.push_back(@VideoPlayer("Ladder_Skip", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 30:
-		help_videos.push_back(@VideoPlayer("Grapple_Ledge_Bunnyhop", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 31:
-		help_videos.push_back(@VideoPlayer("Platform_Grapple_Accelerator", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 32:
-		help_videos.push_back(@VideoPlayer("Spider_Tech", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 33:
-		help_videos.push_back(@VideoPlayer("Diagonal_Spike_Dodge", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 34:
-		help_videos.push_back(@VideoPlayer("Horizontal_Spike_Dodge", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 35:
-		help_videos.push_back(@VideoPlayer("Vertical_Spike_Dodge", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 36:
-		help_videos.push_back(@VideoPlayer("Accurate_Spike_Dodging", Vec2f(500, 300), 1.0f, _15fps));
-		return;
-	case 37:
-		help_videos.push_back(@VideoPlayer("Grapple_Corner_bounce", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 38:
-		help_videos.push_back(@VideoPlayer("Diagonal_Grapple_Trampoline_Boost", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 39:
-		help_videos.push_back(@VideoPlayer("High_Grapple_Boost", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	case 40:
-		help_videos.push_back(@VideoPlayer("Perfect_Grapple_Swing", Vec2f(500, 300), 1.0f, _30fps));
-		return;
-	default:
-		break;
+		case 0:
+			help_videos.push_back(@VideoPlayer("Tiles_Have_Properties", Vec2f(500, 300), 1.0f, _15fps));
+			return;
+		case 1:
+			help_videos.push_back(@VideoPlayer("Pathline_Assist", Vec2f(500, 300), 1.0f, _15fps));
+			return;
+		case 2:
+			help_videos.push_back(@VideoPlayer("Edge_Climb", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 3:
+			help_videos.push_back(@VideoPlayer("Edge_Jump", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 4:
+			help_videos.push_back(@VideoPlayer("Niche_Grab", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 5:
+			help_videos.push_back(@VideoPlayer("Higher_Glide", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 6:
+			help_videos.push_back(@VideoPlayer("Long_Ladder_Jump", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 7:
+			help_videos.push_back(@VideoPlayer("Spike_Wallrun", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 8:
+			help_videos.push_back(@VideoPlayer("Ceiling_Grab", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 9:
+			help_videos.push_back(@VideoPlayer("Deep_Edge_Jump", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 10:
+			help_videos.push_back(@VideoPlayer("Quick_Slide", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 11:
+			help_videos.push_back(@VideoPlayer("Door_Grab", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 12:
+			help_videos.push_back(@VideoPlayer("Glide_Door_Climb", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 13:
+			help_videos.push_back(@VideoPlayer("Double_Slash_Ladder_Grab", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 14:
+			help_videos.push_back(@VideoPlayer("Late_Glide_Jump", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 15:
+			help_videos.push_back(@VideoPlayer("Late_Slide_Jump", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 16:
+			help_videos.push_back(@VideoPlayer("Niche_Wallrun_Recovery", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 17:
+			help_videos.push_back(@VideoPlayer("Niche_Jump", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 18:
+			help_videos.push_back(@VideoPlayer("Trampoline_Glide", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 19:
+			help_videos.push_back(@VideoPlayer("Water_Bounce", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 20:
+			help_videos.push_back(@VideoPlayer("Bunnyhop", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 21:
+			help_videos.push_back(@VideoPlayer("Waterrun_Edge_Grab", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 22:
+			help_videos.push_back(@VideoPlayer("Corner_Jump", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 23:
+			help_videos.push_back(@VideoPlayer("Late_Corner_Jump", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 24:
+			help_videos.push_back(@VideoPlayer("Wide_Corner_Jump", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 25:
+			help_videos.push_back(@VideoPlayer("Slide_Ceiling_Jump", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 26:
+			help_videos.push_back(@VideoPlayer("Seven_Tiles_Jump", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 27:
+			help_videos.push_back(@VideoPlayer("Ladder_Skip", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 28:
+			help_videos.push_back(@VideoPlayer("Grapple_Ledge_Bunnyhop", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 29:
+			help_videos.push_back(@VideoPlayer("Grapple_Corner_bounce", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 30:
+			help_videos.push_back(@VideoPlayer("Platform_Grapple_Slingshot", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 31:
+			help_videos.push_back(@VideoPlayer("Spider_Tech", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 32:
+			help_videos.push_back(@VideoPlayer("Platform_Grapple_Accelerator", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 33:
+			help_videos.push_back(@VideoPlayer("Trampoline_Grapple_Boost", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 34:
+			help_videos.push_back(@VideoPlayer("Diagonal_Grapple_Trampoline_Boost", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 35:
+			help_videos.push_back(@VideoPlayer("High_Grapple_Boost", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 36:
+			help_videos.push_back(@VideoPlayer("Diagonal_Spike_Dodge", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 37:
+			help_videos.push_back(@VideoPlayer("Horizontal_Spike_Dodge", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 38:
+			help_videos.push_back(@VideoPlayer("Vertical_Spike_Dodge", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		case 39:
+			help_videos.push_back(@VideoPlayer("Accurate_Spike_Dodging", Vec2f(500, 300), 1.0f, _15fps));
+			return;
+		case 40:
+			help_videos.push_back(@VideoPlayer("Perfect_Grapple_Swing", Vec2f(500, 300), 1.0f, _30fps));
+			return;
+		default:
+			break;
 	}
 
 	print("Loaded " + help_videos.length + " help videos");
@@ -325,7 +318,7 @@ void onTick(CRules@ this)
     	setCachedStates(this);
 	}
 
-	if (initialized && isClient() && !this.hasTag("videos_loaded") && getLocalPlayer() !is null && getGameTime() % 5 == 0)
+	if (initialized && isClient() && !this.hasTag("videos_loaded") && getLocalPlayer() !is null)
 	{
 		LoadVideos(this, load_videos_count);
 		load_videos_count++;
@@ -531,7 +524,7 @@ void InitializeGUI(CRules@ this)
 
 	Label@ helpTitle = @Label(title.localPosition, title.size, "", SColor(255, 0, 0, 0), true, title.font);
 	helpTitle.name = "title";
-	helpTitle.setText(helpTitle.textWrap("(WIP) Hover on the videos to watch them (A/D) [01]", title.font));
+	helpTitle.setText(helpTitle.textWrap("Rejoin if anything breaks [01]", title.font));
 	helpFrame.addChild(helpTitle);
 
 	// slider and scrollers

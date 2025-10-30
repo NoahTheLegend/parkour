@@ -22,6 +22,9 @@ class VideoPlayer
     string label;
     string prefix;
 
+    string multiline_label;
+    u8 lines;
+
     VideoPlayer(string path, Vec2f _size, f32 _scale = 1.0f, f32 _speed = 1.0f)
     {
         video_path = path;
@@ -49,6 +52,27 @@ class VideoPlayer
             label += label_spl[i];
         }
 
+        multiline_label = "";
+        lines = 0;
+
+        string[] words = label.split(" ");
+        for (uint i = 0; i < words.length(); i++)
+        {
+            multiline_label += words[i];
+            if (i + 1 < words.length())
+            {
+                // replace every 2nd space (i+1 is the space index, 1-based)
+                if (((i + 1) % 2) == 0)
+                {
+                    multiline_label += "\n";
+                    lines++;
+                }
+                else
+                    multiline_label += " ";
+
+            }
+        }
+        
         _paths_to_frames.clear();
         cachePaths();
     }
@@ -60,7 +84,6 @@ class VideoPlayer
         {
             string formatted = "_" + ("0000" + i).substr((("0000" + i).length() - 4), 4);
             string raw_path = video_path + formatted + ".png";
-            print("Looking for frame: " + raw_path);
 
             CFileMatcher fm(raw_path);
             string frame_path = fm.getFirst();
@@ -73,8 +96,6 @@ class VideoPlayer
             {
                 _paths_to_frames.push_back(frame_path);
                 total_frames++;
-
-                //print("Cached frame: " + frame_path + " raw: " + raw_path);
             }
         }
     }
@@ -149,9 +170,8 @@ class VideoPlayer
 
             // draw image exactly in the center of the screen
             current_position = screen_size / 2 - Vec2f(size.x * currentSX, size.y * currentSY);
-            GUI::DrawPane(current_position - extra_size, current_position + Vec2f(size.x * currentSX * 2, size.y * currentSY * 2) + extra_size, SColor(255 * fade_in, 155, 85, 25));
 
-            GUI::SetFont("Terminus_18");
+            GUI::DrawPane(current_position - extra_size, current_position + Vec2f(size.x * currentSX * 2, size.y * currentSY * 2) + extra_size, SColor(255 * fade_in, 155, 85, 25));
             show_label = true;
         }
         
@@ -160,10 +180,13 @@ class VideoPlayer
         if (!is_playing)
         {
             // draw the name at the bottom of preview
+            GUI::SetFont("Terminus_14");
+            GUI::DrawTextCentered(multiline_label, current_position + Vec2f(size.x * currentSX, scaled_size.y - 15 - (7 * lines)), SColor(255 * fade_in, 255, 255, 255));
         }
         if (show_label)
         {
-            GUI::DrawTextCentered(label, current_position + Vec2f(size.x * currentSX, 15), SColor(255 * fade_in, 255, 255, 255));
+            GUI::SetFont("Terminus_18");
+            GUI::DrawTextCentered(label, current_position + Vec2f(size.x * currentSX, size.y - 15), SColor(255 * fade_in, 255, 255, 255));
         }
     }
 
