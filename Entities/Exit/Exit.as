@@ -43,8 +43,10 @@ void onTick(CBlob@ this)
 			Vec2f start_pos = rules.get_Vec2f("current_room_pos");
 			Vec2f room_size = rules.get_Vec2f("current_room_size");
 
-			print("sent exit "+level_type+" "+(level_id + 1)+" "+start_pos.x+" "+start_pos.y);
+			print("[INF] Sent exit "+level_type+" "+(level_id + 1)+" "+start_pos.x+" "+start_pos.y);
 			sendRoomCommand(rules, player.getNetworkID(), level_type, level_id + 1, start_pos);
+
+			this.server_Die();
 		}
 	}
 }
@@ -102,6 +104,7 @@ void onCommand(CBlob@ this, u8 cmd, CBitStream@ params)
 
 		CPlayer@ p = getPlayerByNetworkId(pid);
 		if (p is null) return;
+		if (p !is this.getDamageOwnerPlayer()) return;
 
 		CRules@ rules = getRules();
 		if (rules is null) return;

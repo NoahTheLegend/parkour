@@ -210,9 +210,9 @@ class RoomPNGLoader
 					SColor col = (idx != -1) ? colors[idx] : SColor();
 					Vec2f last_pos = lazy_pos + pos * map.tilesize + margin;
 
-					SetMesh();
+					//SetMesh();
 					handlePixel(col, last_pos);
-					FixMesh();
+					//FixMesh();
 					placed_tiles.push_back(map.getTileOffset(lazy_pos + pos * map.tilesize));
 				}
 
@@ -262,9 +262,9 @@ class RoomPNGLoader
 				const SColor pixel = image.readPixel();
 				Vec2f last_pos = lazy_pos + pixel_pos * map.tilesize + margin;
 
-				SetMesh();
+				//SetMesh();
 				handlePixel(pixel, last_pos);
-				FixMesh();
+				//FixMesh();
 				lazy_placed_tiles.push_back(map.getTileOffset(last_pos));
 
 				lazy_pixel_index++;
@@ -888,7 +888,12 @@ CBlob@ spawnHall(CMap@ map, int offset, u8 team)
 
 CBlob@ spawnBlob(CMap@ map, u16 player_id, const string &in name, u8 team, Vec2f position)
 {
-	return server_CreateBlob(name, team, position);
+	CBlob@ blob = server_CreateBlob(name, team, position);
+
+	CPlayer@ player = getPlayerByNetworkId(player_id);
+	if (player !is null) blob.SetDamageOwnerPlayer(player);
+
+	return blob;
 }
 
 CBlob@ spawnBlob(CMap@ map, u16 player_id, const string &in name, u8 team, Vec2f position, const bool fixed)
@@ -896,6 +901,9 @@ CBlob@ spawnBlob(CMap@ map, u16 player_id, const string &in name, u8 team, Vec2f
 	CBlob@ blob = server_CreateBlob(name, team, position);
 	blob.set_u16("owner_id", player_id);
 	blob.Tag("owner_tag_" + player_id);
+
+	CPlayer@ player = getPlayerByNetworkId(player_id);
+	if (player !is null) blob.SetDamageOwnerPlayer(player);
 
 	//blob.set_s32("_support", blob.getShape().getConsts().support);
 	//blob.getShape().getConsts().support = 0;
@@ -914,6 +922,9 @@ CBlob@ spawnBlob(CMap@ map, u16 player_id, const string &in name, u8 team, Vec2f
 	blob.setAngleDegrees(angle);
 	blob.set_u16("owner_id", player_id);
 
+	CPlayer@ player = getPlayerByNetworkId(player_id);
+	if (player !is null) blob.SetDamageOwnerPlayer(player);
+
 	blob.set_Vec2f("spawn_position", position);
 	blob.AddScript("WaitForRoomLoader.as");
 
@@ -924,6 +935,9 @@ CBlob@ spawnBlob(CMap@ map, u16 player_id, const string &in name, u8 team, Vec2f
 {
 	CBlob@ blob = spawnBlob(map, player_id, name, team, position, angle);
 	blob.set_u16("owner_id", player_id);
+	
+	CPlayer@ player = getPlayerByNetworkId(player_id);
+	if (player !is null) blob.SetDamageOwnerPlayer(player);
 
 	//blob.set_s32("_support", blob.getShape().getConsts().support);
 	//blob.getShape().getConsts().support = 0;
@@ -940,6 +954,9 @@ CBlob@ spawnBlob(CMap@ map, u16 player_id, const string& in name, int offset, u8
 {
 	CBlob@ blob = spawnBlob(map, player_id, name, team, getSpawnPosition(map, offset) + posOffset, angle, attached_to_map);
 	blob.set_u16("owner_id", player_id);
+
+	CPlayer@ player = getPlayerByNetworkId(player_id);
+	if (player !is null) blob.SetDamageOwnerPlayer(player);
 
 	blob.set_Vec2f("spawn_position", getSpawnPosition(map, offset));
 	blob.AddScript("WaitForRoomLoader.as");
