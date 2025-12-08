@@ -144,13 +144,17 @@ void onRender(CRules@ this)
     int current_complexity = this.get_s32("current_level_complexity");
     string type_name = this.get_string("current_level_type_name");
 
+    f32 offset = 0;
+    #ifdef STAGING
+    offset = 20;
+    #endif
     GUI::SetFont("Terminus_18");
-    GUI::DrawText("LEVEL: " + type_name + " " + level_id, Vec2f(10, 10), SColor(255, 255, 255, 255));
-    GUI::DrawText("COMPLEXITY: ", Vec2f(10, 30), SColor(255, 255, 255, 255));
+    GUI::DrawText("LEVEL: " + type_name + " " + level_id, Vec2f(10, 10 + offset), SColor(255, 255, 255, 255));
+    GUI::DrawText("COMPLEXITY: ", Vec2f(10, 30 + offset), SColor(255, 255, 255, 255));
 
     string current_complexity_string = current_complexity == -1 ? "N/A" : "" + current_complexity;
     SColor col = getComplexityRedness(current_complexity);
-    GUI::DrawText("" + current_complexity_string, Vec2f(128, 30), col);
+    GUI::DrawText("" + current_complexity_string, Vec2f(128, 30 + offset), col);
 
     if (local_room_coords !is null)
     {
