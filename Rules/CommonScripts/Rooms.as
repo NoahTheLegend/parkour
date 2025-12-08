@@ -372,6 +372,12 @@ void RenderMessages(CRules@ this)
     }
 }
 
+void onPlayerLeave(CRules@ this, CPlayer@ player)
+{
+    RoomPNGLoader empty;
+    this.set("room_loader_" + player.getUsername(), @empty);
+}
+
 bool debug_test = false;
 void onTick(CRules@ this)
 {

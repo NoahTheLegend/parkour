@@ -446,6 +446,7 @@ void RunRoomLoaders(CRules@ this)
                 loader.loadRoom();
         }
     }
+
     // server loader
     RoomPNGLoader@ server_loader;
     if (this.get("room_loader_server", @server_loader))
