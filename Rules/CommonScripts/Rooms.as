@@ -664,6 +664,12 @@ void PathlineTick(CRules@ this)
             if (!pathline_blob.exists("active") || !pathline_blob.get_bool("active")) continue;
             u8 room_id = pathline_blob.get_u8("room_id");
 
+            #ifdef STAGING
+            if (personal_pathlines.length <= room_id)
+            {
+                personal_pathlines.resize(room_id + 1);
+            }
+            #endif
             personal_pathlines.insertAt(room_id, pathline_blob);
         }
     }

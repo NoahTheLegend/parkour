@@ -62,3 +62,9 @@ bool canBePickedUp(CBlob@ this, CBlob@ byBlob)
 {
 	return false;
 }
+
+void onDie(CBlob@ this)
+{
+	if (!isServer()) return;
+	getMap().server_SetTile(this.getPosition(), CMap::tile_empty);
+}
