@@ -16,7 +16,7 @@ void onInit(CBlob@ this)
 	this.getShape().getConsts().net_threshold_multiplier = 0.1f;
 
 	this.set_u8("room_id", 0);
-	this.set_bool("active", false);
+	this.set_bool("active", true);
 	this.set_u32("start_time", 0);
 	this.set_Vec2f("room_pos", Vec2f(0,0));
 }

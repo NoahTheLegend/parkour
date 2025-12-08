@@ -1025,7 +1025,7 @@ void onRender(CRules@ this)
 
 	active_time = showMenu ? active_time + 1.0f / tick : 0;
 	Vec2f new_position = Vec2f_lerp(menuWindow.localPosition, showMenu ? posShown : posHidden, 0.35f);
-	if (menuWindow.localPosition != new_position)
+	if (menuWindow.localPosition != new_position && helpFrame.isEnabled)
 	{
 		UpdateHelpFrameVideos(cast<Rectangle@>(helpFrame.getChild("slider")), default_grid);
 	}

@@ -287,6 +287,9 @@ void CreateRoomCommand(CRules@ this, CBitStream@ params)
     }
 
     this.SendCommand(this.getCommandID("sync_room_owners"), params1);
+    
+    Vec2f room_pos = getRoomPosFromID(free_room_id);
+    BuildRoom(this, pid, RoomType::knight, 0, ROOM_SIZE, room_pos);
 }
 
 void SyncRoomOwnerCommand(CRules@ this, CBitStream@ params)

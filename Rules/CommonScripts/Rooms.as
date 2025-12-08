@@ -94,6 +94,15 @@ void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
     }
     else if (cmd == this.getCommandID("room_chatcommand"))
     {
+        if (this.exists("_last_room_chatcommand_time"))
+        {
+            u32 last_time = this.get_u32("_last_room_chatcommand_time");
+            if (getGameTime() - last_time < base_room_set_delay)
+            {
+                return;
+            }
+        }
+        this.set_u32("_last_room_chatcommand_time", getGameTime());
         RoomChatCommand(this, params);
     }
     else if (cmd == this.getCommandID("editor"))
