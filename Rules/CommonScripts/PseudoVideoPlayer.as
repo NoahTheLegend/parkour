@@ -127,16 +127,9 @@ class VideoPlayer
         {
             fade_in = Maths::Lerp(Maths::Max(0.5f, fade_in), 1.0f, 0.25f);
 
-            // render_time is adding up to 1.0f to trigger a frame change with any fpslimit set
-            f32 tick = f32(30.0f) / 30.0f;
-
-	        //#ifdef STAGING
-	        //tick = Maths::Max(1, f32(v_fpslimit) / 30.0f);
-	        //#endif
-
-            render_time += 1.0f / tick * speed;
+            render_time +=  speed * getRenderSmoothDeltaTime();
             if (render_time >= 1.0f)
-            {
+            {   
                 current_frame += int(render_time);
                 render_time = 0;
             }

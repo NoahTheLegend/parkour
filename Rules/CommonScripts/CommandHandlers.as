@@ -15,9 +15,6 @@ void sendRoomCommand(CRules@ rules, u16 pid, u8 type, int level_id, Vec2f pos)
 
     if (isClient())
     {
-        CPlayer@ p = getPlayerByNetworkId(pid);
-        if (p is null || !p.isMyPlayer()) return;
-
         rules.SendCommand(rules.getCommandID("set_room"), params);
         print("[CMD] Sent " + rules.getCommandID("set_room"));
     }
@@ -114,6 +111,8 @@ void SyncRoomCommand(CRules@ this, CBitStream@ params)
 
     u16 pid;
     if (!params.saferead_u16(pid)) {print("[CMD] Failed to read player id"); return;}
+
+    if (!getPlayerByNetworkId(pid).isMyPlayer()) return;
 
     u8 level_type;
     if (!params.saferead_u8(level_type)) {print("[CMD] Failed to read room type"); return;}
@@ -223,7 +222,7 @@ void CreateRoomCommand(CRules@ this, CBitStream@ params)
 
     CPlayer@ p = getPlayerByNetworkId(pid);
     if (p is null) return;
-    
+
     u8[]@ room_ids;
     if (!this.get("room_ids", @room_ids)) {print("[CMD] Failed to get room ids"); return;}
 
@@ -264,7 +263,7 @@ void CreateRoomCommand(CRules@ this, CBitStream@ params)
     {
         // find a free room to claim
         for (uint i = 0; i < room_ids.size(); i++)
-        {
+        {   
             if (room_owners[i] == 0) // unowned
             {
                 free_room_id = room_ids[i];
@@ -284,6 +283,7 @@ void CreateRoomCommand(CRules@ this, CBitStream@ params)
         params1.write_u8(level_types[i]);
         params1.write_u16(level_ids[i]);
         params1.write_u16(room_owners[i]);
+        
     }
 
     this.SendCommand(this.getCommandID("sync_room_owners"), params1);
@@ -295,6 +295,8 @@ void SyncRoomOwnerCommand(CRules@ this, CBitStream@ params)
 
     u16 pid;
     if (!params.saferead_u16(pid)) {print("[CMD] Failed to read player id"); return;}
+
+    if (!getPlayerByNetworkId(pid).isMyPlayer()) return;
 
     u8 free_room_id;
     if (!params.saferead_u8(free_room_id)) {print("[CMD] Failed to read free room id"); return;}
@@ -334,7 +336,7 @@ void SyncRoomOwnerCommand(CRules@ this, CBitStream@ params)
     this.set("room_owners", @room_owners);
     
     CPlayer@ p = getPlayerByNetworkId(pid);
-    if (p !is null && p.isMyPlayer())
+    if (p !is null)
     {
         warn("[INF] Player " + p.getUsername() + " assigned room id " + free_room_id);
         this.set_u8("captured_room_id", free_room_id);
