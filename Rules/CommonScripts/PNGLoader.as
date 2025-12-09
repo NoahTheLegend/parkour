@@ -444,12 +444,12 @@ class RoomPNGLoader
 			switch (pixel.color)
 			{
 			// Tiles
-			case map_colors::tile_ground:           {map.server_SetTile(pos, CMap::tile_ground);           break;}
+			case map_colors::tile_ground:           {map.server_SetTile(pos, CMap::tile_ground_fake);           break;}
 			case map_colors::tile_ground_back:      {map.server_SetTile(pos, CMap::tile_ground_back);      break;}
-			case map_colors::tile_stone:            {map.server_SetTile(pos, CMap::tile_stone);            break;}
-			case map_colors::tile_thickstone:       {map.server_SetTile(pos, CMap::tile_thickstone);       break;}
-			case map_colors::tile_bedrock:          {map.server_SetTile(pos, CMap::tile_bedrock);          break;}
-			case map_colors::tile_gold:             {map.server_SetTile(pos, CMap::tile_gold);             break;}
+			case map_colors::tile_stone:            {map.server_SetTile(pos, CMap::tile_stone_fake);            break;}
+			case map_colors::tile_thickstone:       {map.server_SetTile(pos, CMap::tile_thickstone_fake);       break;}
+			case map_colors::tile_bedrock:          {map.server_SetTile(pos, CMap::tile_bedrock_fake);          break;}
+			case map_colors::tile_gold:             {map.server_SetTile(pos, CMap::tile_gold_fake);             break;}
 			case map_colors::tile_castle:           {map.server_SetTile(pos, CMap::tile_castle);           break;}
 			case map_colors::tile_castle_back:      {map.server_SetTile(pos, CMap::tile_castle_back);      break;}
 			case map_colors::tile_castle_moss:      {map.server_SetTile(pos, CMap::tile_castle_moss);      break;}
@@ -781,10 +781,10 @@ void PlaceMostLikelyTile(CMap@ map, int _offset)
 		bool leftWood  = (left == CMap::tile_wood || left == CMap::tile_wood_back);
 		bool rightWood = (right == CMap::tile_wood || right == CMap::tile_wood_back);
 
-		bool upGround    = (up == CMap::tile_ground || up == CMap::tile_ground_back);
-		bool downGround  = (down == CMap::tile_ground || down == CMap::tile_ground_back);
-		bool leftGround  = (left == CMap::tile_ground || left == CMap::tile_ground_back);
-		bool rightGround = (right == CMap::tile_ground || right == CMap::tile_ground_back);
+		bool upGround    = (up == CMap::tile_ground_fake || up == CMap::tile_ground_back);
+		bool downGround  = (down == CMap::tile_ground_fake || down == CMap::tile_ground_back);
+		bool leftGround  = (left == CMap::tile_ground_fake || left == CMap::tile_ground_back);
+		bool rightGround = (right == CMap::tile_ground_fake || right == CMap::tile_ground_back);
 
 		// neighbor solidity (use map's definition)
 		bool upSolid    = map.isTileSolid(map.getTile(_offset - map.tilemapwidth));
