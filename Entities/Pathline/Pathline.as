@@ -38,7 +38,6 @@ void onTick(CBlob@ this)
 	u32 time = this.get_u32("time");
 	if (time + 1 >= getGameTime())
 	{
-		print("e");
 		return;
 	}
 
@@ -49,7 +48,9 @@ void onTick(CBlob@ this)
 	Vec2f offset = Vec2f(0, -3);
 	Vec2f thispos = this.getPosition() + offset;
 
-	Vec2f thisoldpos = this.getOldPosition() + offset;
+	Vec2f thisoldpos = this.get_Vec2f("oldpos");
+	this.set_Vec2f("oldpos", thispos);
+
 	if (thisoldpos.x < 8 && thisoldpos.y < 8) return;
 	if ((thisoldpos - thispos).Length() >= 48.0f) return;
 
