@@ -103,7 +103,7 @@ void onCommand(CBlob@ this, u8 cmd, CBitStream@ params)
 		if (!params.saferead_u16(pid)) { print("Failed to read player ID"); return; }
 
 		CPlayer@ p = getPlayerByNetworkId(pid);
-		if (p is null) return;
+		if (p is null || !p.isMyPlayer()) return;
 		if (p !is this.getDamageOwnerPlayer()) return;
 
 		CRules@ rules = getRules();

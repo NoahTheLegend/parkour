@@ -338,7 +338,8 @@ bool onServerProcessChat(CRules@ this,const string& in text_in,string& out text_
 			if (tokens[0] == "!n" || tokens[0] == "!next" || tokens[0] == "!skip"
 				|| tokens[0] == "!p" || tokens[0] == "!prev" || tokens[0] == "!previous"
 				|| tokens[0] == "!r" || tokens[0] == "!rs" || tokens[0] == "!restart"
-				|| tokens[0] == "!l" || tokens[0] == "!level" || tokens[0] == "!lv" || tokens[0] == "!lvl")
+				|| tokens[0] == "!l" || tokens[0] == "!level" || tokens[0] == "!lv" || tokens[0] == "!lvl"
+				|| tokens[0] == "!c" || tokens[0] == "!clear")
 			{
 				CBitStream params;
 				params.write_u16(player.getNetworkID());

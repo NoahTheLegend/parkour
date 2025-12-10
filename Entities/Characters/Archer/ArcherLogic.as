@@ -10,6 +10,7 @@
 #include "BombCommon.as";
 #include "RedBarrierCommon.as";
 #include "StandardControlsCommon.as";
+#include "CustomBlocks.as";
 
 const int FLETCH_COOLDOWN = 45;
 const int PICKUP_COOLDOWN = 15;
@@ -880,11 +881,11 @@ bool grappleHitMap(CBlob@ this, ArcherInfo@ archer, CMap@ map, const f32 dist = 
 		SyncGrapple(this);
 	}
 
-	return  map.isTileSolid(up.type) ||			//fake quad
-	        map.isTileSolid(right.type) ||
-	        map.isTileSolid(left.type) ||
-	        map.isTileSolid(down.type) ||
-	        (dist > 10.0f && map.getSectorAtPosition(archer.grapple_pos, "tree") !is null);   //tree stick
+	return  map.isTileSolid(up.type)    || isTileFake(up.type) ||			//fake quad
+			map.isTileSolid(right.type) || isTileFake(right.type) ||
+			map.isTileSolid(left.type)  || isTileFake(left.type) ||
+			map.isTileSolid(down.type)  || isTileFake(down.type) ||
+			(dist > 10.0f && map.getSectorAtPosition(archer.grapple_pos, "tree") !is null);   //tree stick
 }
 
 bool shouldReleaseGrapple(CBlob@ this, ArcherInfo@ archer, CMap@ map)

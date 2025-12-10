@@ -67,4 +67,5 @@ void onDie(CBlob@ this)
 {
 	if (!isServer()) return;
 	getMap().server_SetTile(this.getPosition(), CMap::tile_empty);
+	getMap().SetTile(getMap().getTileOffset(this.getPosition()), CMap::tile_empty);
 }

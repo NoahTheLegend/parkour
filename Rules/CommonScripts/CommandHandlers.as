@@ -25,6 +25,49 @@ void sendRoomCommand(CRules@ rules, u16 pid, u8 type, int level_id, Vec2f pos)
     }
 }
 
+void sendEraseRoomCommand(CRules@ rules, u16 pid, u8 type, int level_id, Vec2f pos)
+{
+    CBitStream params;
+    params.write_u16(pid); // player id
+    params.write_u8(type);
+    params.write_s32(level_id); // level id
+    params.write_Vec2f(ROOM_SIZE); // room size
+    params.write_Vec2f(pos); // start pos // todo: get from level data
+
+    if (isClient())
+    {
+        rules.SendCommand(rules.getCommandID("erase_room"), params);
+        print("[CMD] Sent " + rules.getCommandID("erase_room"));
+    }
+    else
+    {
+        print("[CMD] Executed EraseRoomCommand directly on server");
+        EraseRoom(rules, pos, ROOM_SIZE, true);
+    }
+}
+
+void EraseRoomCommand(CRules@ this, CBitStream@ params)
+{
+    if (!isServer()) return;
+
+    u16 pid;
+    if (!params.saferead_u16(pid)) {print("[CMD] Failed to read player id"); return;}
+
+    u8 type;
+    if (!params.saferead_u8(type)) {print("[CMD] Failed to read room type"); return;}
+
+    int level_id;
+    if (!params.saferead_s32(level_id)) {print("[CMD] Failed to read level id"); return;}
+
+    Vec2f room_size;
+    if (!params.saferead_Vec2f(room_size)) {print("[CMD] Failed to read room size"); return;}
+
+    Vec2f start_pos;
+    if (!params.saferead_Vec2f(start_pos)) {print("[CMD] Failed to read start pos"); return;}
+
+    EraseRoom(this, start_pos, room_size, true);
+}
+
 void CreateRoomsGridCommand(CRules@ this, CBitStream@ params)
 {
     bool request_sync = false;
@@ -186,6 +229,10 @@ void RoomChatCommand(CRules@ this, CBitStream@ params)
 		{
 			sendRoomCommand(this, player.getNetworkID(), level_type, level_id, level_pos);
 		}
+        else if (tokens[0] == "!c" || tokens[0] == "!clear")
+        {
+            sendEraseRoomCommand(this, player.getNetworkID(), level_type, level_id, level_pos);
+        }
     }
 
     if (tokens.size() >= 2)

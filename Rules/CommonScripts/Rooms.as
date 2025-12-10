@@ -84,6 +84,10 @@ void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
     {
         CreateRoomCommand(this, params);
     }
+    else if (cmd == this.getCommandID("erase_room"))
+    {
+        EraseRoomCommand(this, params);
+    }
     else if (cmd == this.getCommandID("sync_room"))
     {
         SyncRoomCommand(this, params);
@@ -672,6 +676,8 @@ void PathlineTick(CRules@ this)
     CBlob@[] pathlines_unsorted;
     if (getBlobsByName("pathline", @pathlines_unsorted))
     {
+        personal_pathlines.resize(pathlines_unsorted.size());
+
         for (uint i = 0; i < pathlines_unsorted.length; i++)
         {
             CBlob@ pathline_blob = pathlines_unsorted[i];
@@ -680,12 +686,10 @@ void PathlineTick(CRules@ this)
             if (!pathline_blob.exists("active") || !pathline_blob.get_bool("active")) continue;
             u8 room_id = pathline_blob.get_u8("room_id");
 
-            #ifdef STAGING
             if (personal_pathlines.length <= room_id)
             {
                 personal_pathlines.resize(room_id + 1);
             }
-            #endif
             personal_pathlines.insertAt(room_id, pathline_blob);
         }
     }

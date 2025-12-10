@@ -309,7 +309,7 @@ void EnsureRoomsOwned(CRules@ this)
 }
 
 // wipes the room, used before loading a new one
-void EraseRoom(CRules@ this, Vec2f pos, Vec2f size)
+void EraseRoom(CRules@ this, Vec2f pos, Vec2f size, bool force_all_tiles = false)
 {
     CMap@ map = getMap();
     if (map is null) return;
@@ -332,44 +332,59 @@ void EraseRoom(CRules@ this, Vec2f pos, Vec2f size)
         }
     }
 
-    // erase water
-    for (f32 x = pos.x; x < pos.x + size.x; x += map.tilesize)
+    string pos_str = int(pos.x) + "_" + int(pos.y);
+    if (force_all_tiles)
     {
-        for (f32 y = pos.y; y < pos.y + size.y; y += map.tilesize)
+        // erase all tiles in the area at once
+        for (f32 x = pos.x; x < pos.x + size.x; x += map.tilesize)
         {
-            map.server_setFloodWaterWorldspace(Vec2f(x, y), false);
+            for (f32 y = pos.y; y < pos.y + size.y; y += map.tilesize)
+            {
+                map.server_SetTile(Vec2f(x, y), CMap::tile_empty);
+                map.SetTile(map.getTileOffset(Vec2f(x, y)), CMap::tile_empty);
+            }
         }
     }
-
-    // erase cached tiles
-    string pos_str = int(pos.x) + "_" + int(pos.y);
-    u32[]@ offsets;
-
-    if (this.get("_room_tile_offsets_" + pos_str, @offsets))
+    else
     {
-        // cache tile world positions and mark which were replaced with filler
-        Vec2f[] tile_positions;
-        tile_positions.reserve(offsets.length);
-
-        for (uint i = 0; i < offsets.length; i++)
+        // erase water
+        for (f32 x = pos.x; x < pos.x + size.x; x += map.tilesize)
         {
-            Vec2f tpos = map.getTileWorldPosition(offsets[i]);
-            tile_positions.push_back(tpos);
-
-            TileType tile = map.getTile(tpos).type;
-            if (collapseable_tiles.find(tile) != -1)
+            for (f32 y = pos.y; y < pos.y + size.y; y += map.tilesize)
             {
-                // first pass: only replace collapsable tiles with filler
-                map.server_SetTile(tpos, filler_tile);
-                map.SetTile(map.getTileOffset(tpos), filler_tile);
+                map.server_setFloodWaterWorldspace(Vec2f(x, y), false);
             }
         }
 
-        // second pass: replace all remaining cached tiles with empty
-        for (uint i = 0; i < tile_positions.length; i++)
+        // erase cached tiles
+        u32[]@ offsets;
+
+        if (this.get("_room_tile_offsets_" + pos_str, @offsets))
         {
-            map.server_SetTile(tile_positions[i], CMap::tile_empty);
-            map.SetTile(map.getTileOffset(tile_positions[i]), CMap::tile_empty);
+            // cache tile world positions and mark which were replaced with filler
+            Vec2f[] tile_positions;
+            tile_positions.reserve(offsets.length);
+
+            for (uint i = 0; i < offsets.length; i++)
+            {
+                Vec2f tpos = map.getTileWorldPosition(offsets[i]);
+                tile_positions.push_back(tpos);
+
+                TileType tile = map.getTile(tpos).type;
+                if (collapseable_tiles.find(tile) != -1)
+                {
+                    // first pass: only replace collapsable tiles with filler
+                    map.server_SetTile(tpos, filler_tile);
+                    map.SetTile(map.getTileOffset(tpos), filler_tile);
+                }
+            }
+
+            // second pass: replace all remaining cached tiles with empty
+            for (uint i = 0; i < tile_positions.length; i++)
+            {
+                map.server_SetTile(tile_positions[i], CMap::tile_empty);
+                map.SetTile(map.getTileOffset(tile_positions[i]), CMap::tile_empty);
+            }
         }
     }
 

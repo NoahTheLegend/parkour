@@ -73,11 +73,12 @@ void onSetStatic(CBlob@ this, const bool isStatic)
 	}
 }
 
-//TODO: fix flags sync and hitting
-/*void onDie(CBlob@ this)
+void onDie(CBlob@ this)
 {
-    SetSolidFlag(this, false);
-}*/
+	if (!isServer()) return;
+	getMap().server_SetTile(this.getPosition(), CMap::tile_empty);
+	getMap().SetTile(getMap().getTileOffset(this.getPosition()), CMap::tile_empty);
+}
 
 void setOpen(CBlob@ this, bool open, bool faceLeft = false)
 {

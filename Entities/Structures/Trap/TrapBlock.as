@@ -32,11 +32,12 @@ void onInit(CBlob@ this)
 	this.getCurrentScript().runFlags |= Script::tick_not_attached;
 }
 
-//TODO: fix flags sync and hitting
-/*void onDie( CBlob@ this )
+void onDie(CBlob@ this)
 {
-	SetSolidFlag(this, false);
-}*/
+	if (!isServer()) return;
+	getMap().server_SetTile(this.getPosition(), CMap::tile_empty);
+	getMap().SetTile(getMap().getTileOffset(this.getPosition()), CMap::tile_empty);
+}
 
 void onSetStatic(CBlob@ this, const bool isStatic)
 {
