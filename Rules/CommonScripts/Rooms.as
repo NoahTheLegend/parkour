@@ -151,6 +151,12 @@ void onRender(CRules@ this)
     GUI::SetFont("Terminus_18");
     GUI::DrawText("LEVEL: " + type_name + " " + level_id, Vec2f(10, 10 + offset), SColor(255, 255, 255, 255));
     GUI::DrawText("COMPLEXITY: ", Vec2f(10, 30 + offset), SColor(255, 255, 255, 255));
+    #ifdef STAGING
+    GUI::SetFont("Terminus_12");
+    GUI::DrawText("STAGING IS UNSTABLE", Vec2f(10, 60 + offset), SColor(255, 255, 255, 255));
+    GUI::DrawText("PRESS G TO RESTART LEVEL", Vec2f(10, 80 + offset), SColor(255, 255, 255, 255));
+    #endif
+    GUI::SetFont("Terminus_18");
 
     string current_complexity_string = current_complexity == -1 ? "N/A" : "" + current_complexity;
     SColor col = getComplexityRedness(current_complexity);

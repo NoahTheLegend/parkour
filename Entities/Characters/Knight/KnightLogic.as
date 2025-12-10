@@ -217,7 +217,7 @@ void onTick(CBlob@ this)
 		u8 time = continuous_teleport ? 0 : 10;
 
 		bool pressed_key_mark = controls.ActionKeyPressed(AK_PARTY);
-		bool pressed_key_build_modifier = controls.ActionKeyPressed(AK_BUILD_MODIFIER);
+		bool pressed_key_build_modifier = controls.ActionKeyPressed(AK_BUILD_MODIFIER); bool just_pressed_g        = controls.isKeyJustPressed(KEY_KEY_G);
 		bool just_pressed_key_build_modifier = pressed_key_build_modifier && key_build_modifier_timer == 0;
 		bool just_released_key_build_modifier = !pressed_key_build_modifier && key_build_modifier_timer > 0;
 
@@ -231,9 +231,23 @@ void onTick(CBlob@ this)
 			this.AddForce(Vec2f_zero); // update shape
 			this.getShape().getVars().inwater = false;
 		}
+
+		if (just_pressed_g)
+		{
+			CRules@ rules = getRules();
+			CPlayer@ player = this.getPlayer();
+			if (rules is null || player is null) return;
+
+			CBitStream params;
+			params.write_u16(player.getNetworkID());
+			params.write_u8(1);
+			params.write_string("!restart");
+
+			rules.SendCommand(rules.getCommandID("room_chatcommand"), params);
+		}
 	}
 
-	if (this.getTeamNum() == 1) 
+	if (this.getTeamNum() == 1) // rework spawn system later i guess
 	{
 		this.server_setTeamNum(0);
 	}
