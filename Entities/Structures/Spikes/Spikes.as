@@ -1,4 +1,5 @@
 #include "Hitters.as"
+#include "CustomBlocks.as";
 
 enum facing_direction
 {
@@ -72,7 +73,7 @@ void tileCheck(CBlob@ this, CMap@ map, Vec2f pos, f32 angle, facing_direction se
 			params.placedOnStone = true;
 		}
 	}
-	else if (map.isTileSolid(t))
+	else if (map.isTileSolid(t) || isTileFake(t))
 	{
 		params.onSurface = true;
 		params.facing = set_facing;
@@ -93,7 +94,7 @@ void onTick(CBlob@ this)
 	const f32 tilesize = map.tilesize;
 
 	if (getNet().isServer() &&
-	        (map.isTileSolid(map.getTile(pos)) || map.rayCastSolid(pos - this.getVelocity(), pos)))
+	        (map.isTileSolid(map.getTile(pos).type) || isTileFake(map.getTile(pos).type)) || map.rayCastSolid(pos - this.getVelocity(), pos))
 	{
 		this.server_Hit(this, pos, Vec2f(0, -1), 3.0f, Hitters::fall, true);
 		return;

@@ -45,9 +45,9 @@ void onTick(CBlob@ this)
 
 			print("[INF] Sent exit "+level_type+" "+(level_id + 1)+" "+start_pos.x+" "+start_pos.y);
 			sendRoomCommand(rules, player.getNetworkID(), level_type, level_id + 1, start_pos);
-
-			this.server_Die();
 		}
+
+		this.server_Die();
 	}
 }
 

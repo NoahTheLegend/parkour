@@ -54,19 +54,6 @@ void onSetTile(CMap@ map, u32 index, TileType tile_new, TileType tile_old)
 		u32 x = index % map.tilemapwidth;
 		u32 y = index / map.tilemapwidth;
 
-		TileType t;
-		TileType tback = 0;
-
-		bool mirror, flip, rotate, backmirror, backflip, backrotate, front;
-		MakeTileVariation_Custom(map, x, y, tile_new, t, tback, mirror, flip, rotate, backmirror, backflip, backrotate, front);
-
-		if (t != tile_new)
-        {
-            map.SetTile(index, t); 
-        }
-
-		if (mirror) map.AddTileFlag(index, Tile::MIRROR);
-        if (flip)   map.AddTileFlag(index, Tile::FLIP);
-        if (rotate) map.AddTileFlag(index, Tile::ROTATE);
+		MakeTileVariation_Custom(map, x, y, tile_new, tile_old);
 	}
 }
