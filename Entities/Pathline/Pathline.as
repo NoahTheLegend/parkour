@@ -13,7 +13,6 @@ void onInit(CBlob@ this)
 	this.getShape().SetStatic(true);
 	this.getShape().SetGravityScale(0.0f);
 	this.getShape().getConsts().mapCollisions = false;
-	this.getShape().getConsts().net_threshold_multiplier = 0.1f;
 
 	this.set_u8("room_id", 0);
 	this.set_bool("active", false);
