@@ -38,6 +38,7 @@ class RoomPNGLoader
 	Vec2f lazy_room_size;
 	string lazy_filename;
 	uint lazy_pixel_index;
+	uint[] lazy_water_offsets;
 	uint[] lazy_placed_tiles;
 	int lazy_top_margin, lazy_bottom_margin, lazy_left_margin, lazy_right_margin;
 	array<Vec2f> lazy_pixels_to_place;
@@ -262,9 +263,16 @@ class RoomPNGLoader
 				const SColor pixel = image.readPixel();
 				Vec2f last_pos = lazy_pos + pixel_pos * map.tilesize + margin;
 
-				//SetMesh();
-				handlePixel(pixel, last_pos);
-				//FixMesh();
+				// Water tiles: store offset, don't place yet
+				if (pixel.color == map_colors::water_air || pixel.color == map_colors::water_backdirt)
+				{
+					lazy_water_offsets.push_back(map.getTileOffset(last_pos));
+					// Don't place water now
+				}
+				else
+				{
+					handlePixel(pixel, last_pos);
+				}
 				lazy_placed_tiles.push_back(map.getTileOffset(last_pos));
 
 				lazy_pixel_index++;
@@ -287,6 +295,15 @@ class RoomPNGLoader
 					{
 						handleOffset(i, offset_set[step], step, current_offset_count);
 					}
+				}
+
+				// Place all water tiles at once
+				for (uint i = 0; i < lazy_water_offsets.length; ++i)
+				{
+					int offset = lazy_water_offsets[i];
+					// Place water_air or water_backdirt based on original pixel color
+					// You may want to store both offset and color if needed
+					map.server_setFloodWaterOffset(offset, true);
 				}
 
 				// Reset lazy state

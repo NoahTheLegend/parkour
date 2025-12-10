@@ -47,6 +47,7 @@ void onSetTile(CMap@ map, u32 index, TileType tile_new, TileType tile_old)
 	if (isTileFake(tile_new))
 	{
 		map.AddTileFlag(index, Tile::SOLID | Tile::COLLISION);
+		map.SetTileSupport(index, 255);
 	}
 
 	if (tile_old != tile_new && isTileFirstOfType(tile_new))
