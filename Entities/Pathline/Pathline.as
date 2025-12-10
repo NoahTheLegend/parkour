@@ -38,6 +38,7 @@ void onTick(CBlob@ this)
 	u32 time = this.get_u32("time");
 	if (time + 1 >= getGameTime())
 	{
+		print("e");
 		return;
 	}
 
@@ -50,7 +51,7 @@ void onTick(CBlob@ this)
 
 	Vec2f thisoldpos = this.getOldPosition() + offset;
 	if (thisoldpos.x < 8 && thisoldpos.y < 8) return;
-	if ((thisoldpos - thispos).Length() >= 24.0f) return;
+	if ((thisoldpos - thispos).Length() >= 48.0f) return;
 
 	bool is_archer = Maths::Abs(this.getHealth() - 2.0f) < 0.001f;
 	Vec2f grapple_pos_raw = this.get_Vec2f("grapple_pos");
