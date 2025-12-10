@@ -427,8 +427,40 @@ void HandleInput(CRules@ rules, CControls@ controls, CPlayer@ player)
 	}
 }
 
+const string[] font_names = {
+     "Sakana_8",
+     "Sakana_10",
+     "Sakana_12",
+     "Sakana_14",
+     "Sakana_16",
+     "Sakana_18",
+     "Terminus_8",
+     "Terminus_10",
+     "Terminus_12",
+     "Terminus_14",
+	 "Terminus_16",
+     "Terminus_18"
+};
+
 void InitializeGUI(CRules@ this)
 {
+	for (u8 i = 0; i < font_names.length; i++)
+	{
+		string[] parts = font_names[i].split("_");
+		if (parts.length == 2)
+		{
+			string full_font_name = font_names[i];
+			string font_name = parts[0];
+			string font_size = parts[1];
+			
+			if (!GUI::isFontLoaded(font_name))
+			{
+				string font_path = CFileMatcher(full_font_name + ".ttf").getFirst();
+				GUI::LoadFont(full_font_name, font_path, parseInt(font_size), true);
+			}
+		}
+	}
+
 	ConfigFile cfg;
     if (cfg.loadFile("../Cache/NoahsParkour.cfg"))
     {
