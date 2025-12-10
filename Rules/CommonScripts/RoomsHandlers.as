@@ -335,6 +335,19 @@ void EraseRoom(CRules@ this, Vec2f pos, Vec2f size, bool force_all_tiles = false
     string pos_str = int(pos.x) + "_" + int(pos.y);
     if (force_all_tiles)
     {
+        // fill every tile with wooden bg
+        TileType filler_tile = CMap::tile_wood_back;
+        for (f32 x = pos.x; x < pos.x + size.x; x += map.tilesize)
+        {
+            for (f32 y = pos.y; y < pos.y + size.y; y += map.tilesize)
+            {
+                if (map.getTile(Vec2f(x, y)).type == CMap::tile_empty) continue;
+
+                map.server_SetTile(Vec2f(x, y), filler_tile);
+                map.SetTile(map.getTileOffset(Vec2f(x, y)), filler_tile);
+            }
+        }
+        
         // erase all tiles in the area at once
         for (f32 x = pos.x; x < pos.x + size.x; x += map.tilesize)
         {

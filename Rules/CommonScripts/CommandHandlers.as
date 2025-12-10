@@ -199,6 +199,17 @@ void RoomChatCommand(CRules@ this, CBitStream@ params)
 
     CPlayer@ player = getPlayerByNetworkId(pid);
     if (player is null) return;
+    if (!player.isMyPlayer()) return;
+
+    if (this.exists("_last_room_chatcommand_time"))
+    {
+        u32 last_time = this.get_u32("_last_room_chatcommand_time");
+        if (getGameTime() - last_time < base_room_set_delay)
+        {
+            return;
+        }
+    }
+    this.set_u32("_last_room_chatcommand_time", getGameTime());
 
     u8 count;
     if (!params.saferead_u8(count)) {print("[CMD] Failed to read chat tokens count"); return;}

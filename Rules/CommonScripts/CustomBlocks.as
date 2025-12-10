@@ -56,6 +56,11 @@ bool isTileFake(u16 tile)
 	return tile >= CMap::tile_ground_fake && tile < 512 + 80;
 }
 
+bool isFakeBedrock(u16 tile)
+{
+    return tile >= CMap::tile_bedrock_fake && tile < CMap::tile_bedrock_fake + 16;
+}
+
 void HandleCustomTile(CMap@ map, int offset, SColor pixel)
 {
 	//change this in your mod

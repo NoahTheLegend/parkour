@@ -98,15 +98,6 @@ void onCommand(CRules@ this, u8 cmd, CBitStream@ params)
     }
     else if (cmd == this.getCommandID("room_chatcommand"))
     {
-        if (this.exists("_last_room_chatcommand_time"))
-        {
-            u32 last_time = this.get_u32("_last_room_chatcommand_time");
-            if (getGameTime() - last_time < base_room_set_delay)
-            {
-                return;
-            }
-        }
-        this.set_u32("_last_room_chatcommand_time", getGameTime());
         RoomChatCommand(this, params);
     }
     else if (cmd == this.getCommandID("editor"))
@@ -181,7 +172,7 @@ void onRender(CRules@ this)
                 Vec2f top_right = room_pos + Vec2f(room_size.x, 0);
                 Vec2f bottom_left = room_pos + Vec2f(0, room_size.y);
                 Vec2f bottom_right = room_pos + room_size;
-
+                
                 GUI::DrawLine(top_left, top_right, SColor(255, 255, 255, 255));
                 GUI::DrawLine(top_right, bottom_right, SColor(255, 255, 255, 255));
                 GUI::DrawLine(bottom_right, bottom_left, SColor(255, 255, 255, 255));
@@ -422,9 +413,16 @@ void onTick(CRules@ this)
                 if (!getBlobsByTag("personal_pathline_" + room_id, @personal_pathlines)){}
                 
                 CBlob@ personal_pathline_blob;
-                if (personal_pathlines.size() > 0)
-                    @personal_pathline_blob = personal_pathlines[0];
-
+                for (uint i = 0; i < personal_pathlines.length; i++)
+                {
+                    CBlob@ b = personal_pathlines[i];
+                    if (b !is null && b.get_u16("pathline_owner_id") == local_id)
+                    {
+                        @personal_pathline_blob = @b;
+                        break;
+                    }
+                }
+                    
                 if (personal_pathline_blob !is null)
                 {
                     CBitStream params;
@@ -569,7 +567,7 @@ void PathlineTick(CRules@ this)
             CBlob@ pathline_blob = personal_pathlines[i];
             if (pathline_blob is null) continue;
 
-            pathline_blob.set_u16("owner_id", room_owners[i]);
+            pathline_blob.set_u16("pathline_owner_id", room_owners[i]);
         }
     }
 

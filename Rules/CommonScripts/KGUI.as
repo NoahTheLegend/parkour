@@ -471,7 +471,7 @@ class GenericGUIItem : IGUIItem{
 		updateSliderStates();
 
 		drawSelf();
-		if(Debug) GUI::DrawRectangle(position, position+size,DebugColor);
+		if (Debug) GUI::DrawRectangle(position, position+size, DebugColor);
 
 		//draw children
 		for(int i = 0; i < children.length; i++)
@@ -942,7 +942,10 @@ class Button : GenericGUIItem{
 			GUI::DrawText(desc, textPos, color);
 		}
 
-		if(_isLocked) GUI::DrawRectangle(position, position+size, rectColor);
+		if(_isLocked)
+		{
+			GUI::DrawRectangle(position, position+size, rectColor);
+		}
 		GenericGUIItem::drawSelf();
 	}
 }
@@ -1136,9 +1139,14 @@ class Rectangle : GenericGUIItem
 
 	void drawSelf(){
 		if(useColor)
+		{
 			GUI::DrawRectangle(position, position+size,color);
+		}
 		else
+		{
 			GUI::DrawRectangle(position, position+size);
+		}
+
 		GenericGUIItem::drawSelf();
 	}
 

@@ -25,26 +25,29 @@ void onTick(CBlob@ this)
 		this.getCurrentScript().tickFrequency = 0;
 	}
 
-	if (isClient() && this.hasTag("ready") && this.get_u32("teleport_time") + base_exit_delay < getGameTime())
+	if (this.hasTag("ready") && this.get_u32("teleport_time") + base_exit_delay < getGameTime())
 	{
-		CBlob@ blob = getBlobByNetworkID(this.get_u16("teleported_blob_id"));
-		if (blob is null) return;
-
-		if (isClient() && blob.isMyPlayer())
+		if (isClient())
 		{
-			CRules@ rules = getRules();
-			if (rules is null) return;
+			CBlob@ blob = getBlobByNetworkID(this.get_u16("teleported_blob_id"));
+			if (blob is null) return;
 
-			CPlayer@ player = blob.getPlayer();
-			if (player is null) return;
+			if (isClient() && blob.isMyPlayer())
+			{
+				CRules@ rules = getRules();
+				if (rules is null) return;
 
-			u8 level_type = rules.get_u8("current_level_type");
-			s32 level_id = rules.get_s32("current_level_id");
-			Vec2f start_pos = rules.get_Vec2f("current_room_pos");
-			Vec2f room_size = rules.get_Vec2f("current_room_size");
+				CPlayer@ player = blob.getPlayer();
+				if (player is null) return;
 
-			print("[INF] Sent exit "+level_type+" "+(level_id + 1)+" "+start_pos.x+" "+start_pos.y);
-			sendRoomCommand(rules, player.getNetworkID(), level_type, level_id + 1, start_pos);
+				u8 level_type = rules.get_u8("current_level_type");
+				s32 level_id = rules.get_s32("current_level_id");
+				Vec2f start_pos = rules.get_Vec2f("current_room_pos");
+				Vec2f room_size = rules.get_Vec2f("current_room_size");
+
+				print("[INF] Sent exit "+level_type+" "+(level_id + 1)+" "+start_pos.x+" "+start_pos.y);
+				sendRoomCommand(rules, player.getNetworkID(), level_type, level_id + 1, start_pos);
+			}
 		}
 
 		this.server_Die();

@@ -875,7 +875,8 @@ bool grappleHitMap(CBlob@ this, ArcherInfo@ archer, CMap@ map, const f32 dist = 
 	if ((up.type == CMap::tile_castle_moss || right.type == CMap::tile_castle_moss
 		|| left.type == CMap::tile_castle_moss || down.type == CMap::tile_castle_moss)
 		|| up.type == CMap::tile_bedrock || right.type == CMap::tile_bedrock
-		|| left.type == CMap::tile_bedrock || down.type == CMap::tile_bedrock)
+		|| left.type == CMap::tile_bedrock || down.type == CMap::tile_bedrock
+		|| isFakeBedrock(up.type) || isFakeBedrock(right.type) || isFakeBedrock(left.type) || isFakeBedrock(down.type))
 	{
 		archer.grappling = false;
 		SyncGrapple(this);
