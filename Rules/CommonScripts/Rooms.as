@@ -568,6 +568,7 @@ void PathlineTick(CRules@ this)
             if (pathline_blob is null) continue;
 
             pathline_blob.set_u16("pathline_owner_id", room_owners[i]);
+            if (isServer()) pathline_blob.Sync("pathline_owner_id", true);
         }
     }
 

@@ -30,6 +30,7 @@ void onTick(CBlob@ this)
 		params.write_string(this.get_string("pathline_tag"));
 		params.write_Vec2f(this.get_Vec2f("grapple_pos"));
 		params.write_u32(this.get_u32("time"));
+		params.write_u16(this.get_u16("pathline_owner_id"));
 		this.SendCommand(this.getCommandID("sync"), params);
 		
 		this.Untag("sync");
@@ -144,9 +145,13 @@ void onCommand(CBlob@ this, u8 cmd, CBitStream@ params)
 		u32 time;
 		if (!params.saferead_u32(time)) return;
 
+		u16 owner_id;
+		if (!params.saferead_u16(owner_id)) return;
+
 		this.Tag(pathline_tag);
 		this.set_Vec2f("grapple_pos", grapple_pos);
 		this.set_u32("time", time);
+		this.set_u16("pathline_owner_id", owner_id);
 	}
 	else if (cmd == this.getCommandID("switch"))
 	{
