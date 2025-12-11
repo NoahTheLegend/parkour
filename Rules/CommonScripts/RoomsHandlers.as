@@ -63,7 +63,6 @@ void BuildRoom(CRules@ this, u16 pid, u8 level_type, int level_id, Vec2f room_si
         print("[CMD] Failed to get level ids");
         return;
     }
-    
 
     if (room_id < level_ids.size()) level_ids[room_id] = level_id;
     this.set_s32("update_room_pathline_" + room_id, level_id);
@@ -344,7 +343,6 @@ void EraseRoom(CRules@ this, Vec2f pos, Vec2f size, bool force_all_tiles = false
                 if (map.getTile(Vec2f(x, y)).type == CMap::tile_empty) continue;
 
                 map.server_SetTile(Vec2f(x, y), filler_tile);
-                map.SetTile(map.getTileOffset(Vec2f(x, y)), filler_tile);
             }
         }
         
@@ -388,7 +386,6 @@ void EraseRoom(CRules@ this, Vec2f pos, Vec2f size, bool force_all_tiles = false
                 {
                     // first pass: only replace collapsable tiles with filler
                     map.server_SetTile(tpos, filler_tile);
-                    map.SetTile(map.getTileOffset(tpos), filler_tile);
                 }
             }
 
@@ -470,7 +467,7 @@ void RunRoomLoaders(CRules@ this)
         RoomPNGLoader@ loader;
         if (this.get("room_loader_" + username, @loader))
         {
-            if (loader !is null)
+            if (loader !is null && loader.map !is null) // map null check is supposed for left players resetting their loaders
                 loader.loadRoom();
         }
     }

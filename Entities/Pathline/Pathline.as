@@ -2,6 +2,10 @@
 #include "RoomsHandlers.as";
 #include "CommandHandlers.as";
 
+// /rcon CBlob@[] b;getBlobsByName('pathline', @b);for(u8 i=0;i<b.size();i++){print(''+b[i].get_u16('pathline_owner_id'));}
+// /rcon for(u8 i=0;i<getPlayersCount();i++){print(''+getPlayer(i).getNetworkID());}
+// only first room has pathlines, fix
+
 void onInit(CBlob@ this)
 {
 	this.addCommandID("sync");
@@ -40,7 +44,7 @@ void onTick(CBlob@ this)
 	{
 		return;
 	}
-
+	
 	if (!isClient()) return;
 	//if (!this.get_bool("active")) return;
 	if (!this.isOnScreen()) return;

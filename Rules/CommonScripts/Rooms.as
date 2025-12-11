@@ -379,8 +379,21 @@ void RenderMessages(CRules@ this)
 
 void onPlayerLeave(CRules@ this, CPlayer@ player)
 {
+    if (player is null) return;
+    string username = player.getUsername();
+
+    u16[]@ room_owners;
+    if (!this.get("room_owners", @room_owners)) return;
+
+    int idx = room_owners.find(player.getNetworkID());
+    if (idx != -1)
+    {
+        Vec2f pos = getRoomPosFromID(idx);
+        EraseRoom(this, pos, ROOM_SIZE, true);
+    }
+
     RoomPNGLoader empty;
-    this.set("room_loader_" + player.getUsername(), @empty);
+    this.set("room_loader_" + username, @empty);
 }
 
 bool debug_test = false;
