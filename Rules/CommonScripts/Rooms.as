@@ -575,9 +575,9 @@ void PathlineTick(CRules@ this)
                 pathline_blob.set_Vec2f("room_pos", getRoomPosFromID(i));
             }
         }
-        else if (i < personal_pathlines.size())
+        else
         {
-            CBlob@ pathline_blob = personal_pathlines[i];
+            CBlob@ pathline_blob = personal_pathlines[0];
             if (pathline_blob is null) continue;
 
             pathline_blob.set_u16("pathline_owner_id", room_owners[i]);
@@ -695,13 +695,12 @@ void PathlineTick(CRules@ this)
             CBlob@ pathline_blob = pathlines_unsorted[i];
             if (pathline_blob is null) continue;
 
-            if (!pathline_blob.exists("active") || !pathline_blob.get_bool("active")) continue;
             u8 room_id = pathline_blob.get_u8("room_id");
-
             if (personal_pathlines.length <= room_id)
             {
                 personal_pathlines.resize(room_id + 1);
             }
+
             personal_pathlines.insertAt(room_id, pathline_blob);
         }
     }
@@ -714,7 +713,7 @@ void PathlineTick(CRules@ this)
         u8 room_id = pathline_blob.get_u8("room_id");
         if (room_id >= room_pathlines.length) continue;
 
-        string[]@ positions_str = room_pathlines[room_id];
+        string[]@ positions_str = room_pathlines[room_id]; // fix for >0 idxs
         if (positions_str is null || positions_str.length == 0) continue;
 
         // determine pairs mode from level_types (archer uses pairs)

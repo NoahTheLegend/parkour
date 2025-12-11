@@ -4,6 +4,7 @@
 
 // /rcon CBlob@[] b;getBlobsByName('pathline', @b);for(u8 i=0;i<b.size();i++){print(''+b[i].get_u16('pathline_owner_id'));}
 // /rcon for(u8 i=0;i<getPlayersCount();i++){print(''+getPlayer(i).getNetworkID());}
+// /rcon CBlob@[] b;getBlobsByName('pathline', @b);for(u8 i=0;i<b.size();i++){print(''+b[i].hasTag('personal_pathline_'+i));}
 // only first room has pathlines, fix
 
 void onInit(CBlob@ this)
