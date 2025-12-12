@@ -144,6 +144,7 @@ void onCollision(CBlob@ this, CBlob@ blob, bool solid)
 
 	CPlayer@ p = blob.getPlayer();
 	if (p is null || p.getNetworkID() != this.get_u16("owner_id")) return;
+	if (!p.isMyPlayer()) return;
 
 	CBitStream params;
 	params.write_bool(true);
